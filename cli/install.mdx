@@ -1,0 +1,63 @@
+---
+title: "catalyst install — install build artifacts"
+description: "Copy compiled binaries, libraries, and public headers from the build directory into a target installation path organized as bin/, lib/, and include/."
+keywords: ["catalyst", "install", "artifacts", "binaries", "libraries", "headers", "C++"]
+---
+
+`catalyst install` copies the build artifacts produced by `catalyst build` — executables, static or shared libraries, and public header files — into a structured installation directory. The target path is organized into standard subdirectories: `bin/` for executables, `lib/` for libraries, and `include/` for headers.
+
+## Usage
+
+```bash
+catalyst install [OPTIONS] --target <path>
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-p, --profiles TEXT ...` | Profiles to compose when resolving the build artifact (default: `common`). |
+| `-s, --source TEXT` | Source directory of the project (default: current directory). |
+| `-t, --target TEXT` | Destination path to install into. **Required.** |
+| `-h, --help` | Print help and exit. |
+
+<Warning>
+  You must run `catalyst build` before `catalyst install`. The install command reads from the build directory and will fail if artifacts are not present.
+</Warning>
+
+## Installation layout
+
+After running `catalyst install --target <path>`, the target directory contains:
+
+```text
+<target>/
+├── bin/          # Compiled executables
+├── lib/          # Static (.a) or shared (.so / .dll / .dylib) libraries
+└── include/      # Public header files from manifest.dirs.include
+```
+
+## Examples
+
+Install to a local `dist` directory:
+
+```bash
+catalyst install --target ./dist
+```
+
+Install a debug build:
+
+```bash
+catalyst install --target ./dist --profiles debug
+```
+
+Install from a project in a different directory:
+
+```bash
+catalyst install --source ./my-project --target /opt/my-project
+```
+
+Install a release build to a system path:
+
+```bash
+catalyst install --profiles release --target /usr/local
+```

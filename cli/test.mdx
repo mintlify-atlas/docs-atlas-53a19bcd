@@ -1,0 +1,68 @@
+---
+title: "catalyst test — build and run your project tests"
+description: "Build and execute the test binary using the reserved test profile, composing catalyst.yaml with catalyst_test.yaml and forwarding optional arguments."
+keywords: ["catalyst test", "run tests", "test profile", "catalyst_test.yaml", "gtest", "workspace tests"]
+---
+
+`catalyst test` builds and executes the project's test binary. It automatically composes the `common` profile with the reserved `test` profile, meaning your `catalyst.yaml` is merged with `catalyst_test.yaml` before compilation. This separation keeps test-only dependencies, compiler flags, and build settings out of your production configuration.
+
+## Usage
+
+```text
+catalyst test [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  -P,--params TEXT ...        Arguments to pass to the test executable
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-P, --params` | string list | _(empty)_ | Arguments forwarded verbatim to the test executable. Useful for test-framework filters and options. |
+
+## The test profile
+
+<Note>
+The profile name `test` is reserved. `catalyst test` always composes `["common", "test"]` — you cannot override this with `--profiles`. Create `catalyst_test.yaml` in your project root to configure the test build.
+</Note>
+
+A minimal `catalyst_test.yaml` that adds a test framework dependency might look like:
+
+```yaml
+manifest:
+  type: BINARY
+  provides: my-project-tests
+  tooling:
+    CXXFLAGS: "-g -O0 --coverage"
+dependencies:
+  - name: googletest
+    source: git
+    url: https://github.com/google/googletest.git
+    version: v1.14.0
+```
+
+## Workspace tests
+
+When run from the root of a workspace, `catalyst test` runs the test suite for every member. Members that fail are reported individually; the command exits with an error if any member's tests fail.
+
+## Examples
+
+**Run all tests:**
+
+```bash
+catalyst test
+```
+
+**Filter tests by name (Google Test):**
+
+```bash
+catalyst test --params "--gtest_filter=MyTest.*"
+```
+
+**Run tests with verbose output:**
+
+```bash
+catalyst test --params "--gtest_print_time=1" "--gtest_also_run_disabled_tests"
+```

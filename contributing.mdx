@@ -1,0 +1,70 @@
+---
+title: "How to contribute to the Catalyst build system"
+description: "How to report bugs, suggest enhancements, submit pull requests, and set up a local development environment to contribute to Catalyst."
+---
+
+Catalyst is an open-source project and welcomes contributions of all kinds — bug reports, feature suggestions, documentation improvements, and code changes. The guidelines below help keep the process smooth for everyone.
+
+<Warning>
+  Catalyst is in its early stages of development. The interface and configuration schema may change frequently, and large architectural changes are still possible. Before investing significant effort in a contribution, open an issue to check alignment with the project's direction.
+</Warning>
+
+## Bug reports
+
+A good bug report makes it easier for maintainers to reproduce and fix the problem quickly.
+
+- **Search first.** Check [GitHub Issues](https://github.com/CatalystCPP/catalyst-build-system/issues) to see if the bug has already been reported before opening a new one.
+- **Be specific.** Include your OS, compiler version and variant (Clang++/GCC), and a minimal `catalyst.yaml` alongside a small source file that reproduces the problem.
+- **Include logs.** Attach the full `.catalyst.log` output, not just the command-line output. The log file often contains context that the terminal output omits.
+
+## Suggesting enhancements
+
+- **Open an issue first.** Before writing code for a major feature, open an issue to discuss it. This ensures the feature aligns with the project's goals and avoids duplicate work.
+- **Explain the "why".** Describe the problem you are trying to solve and how the proposed feature addresses it. A clear motivation makes it easier to evaluate and prioritise the request.
+
+## Pull requests
+
+<Steps>
+  <Step title="Fork and branch">
+    Fork the repository and create your branch from `dev`, not `main`. Branches based on `main` will not be accepted.
+  </Step>
+  <Step title="Follow the code style">
+    Ensure your changes conform to the project's style guide (see below). Run `catalyst fmt` before committing.
+  </Step>
+  <Step title="Update documentation">
+    If you are adding a feature or changing a subcommand's behaviour, update the relevant files in the `docs/` directory alongside your code changes.
+  </Step>
+  <Step title="Keep PRs atomic">
+    Focus each pull request on a single change. A general rule of thumb is around 100 lines of code. Larger changes are harder to review and slower to merge.
+  </Step>
+</Steps>
+
+## Development setup
+
+### Prerequisites
+
+- **C++ compiler:** Clang++ (preferred) or GCC with C++23 support.
+- **Dependencies:** The project uses `yaml-cpp`, `CLI11`, `reproc`, `nlohmann-json`, and `vcpkg` for dependency management.
+
+### Building Catalyst
+
+If you already have a `catalyst` binary, you can build the project with:
+
+```bash
+catalyst build --profiles debug
+```
+
+Catalyst is designed to build itself. If you are setting up for the first time and do not yet have a binary, see the [installation guide](/installation) for bootstrapping instructions.
+
+## Style guide
+
+- Use modern C++ (C++23 and beyond).
+- Prefer the lowest level of abstraction that remains cross-platform.
+- Follow RAII principles — avoid manual resource management.
+- Format code with `clang-format` using the LLVM style. Run `catalyst fmt` before committing.
+
+The `.clang-format` file in the repository root defines the exact formatting rules.
+
+---
+
+By contributing to Catalyst, you agree that your contributions will be licensed under the [Apache 2.0 License](https://github.com/CatalystCPP/catalyst-build-system/blob/main/LICENSE.md).

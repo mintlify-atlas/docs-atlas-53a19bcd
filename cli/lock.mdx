@@ -1,0 +1,106 @@
+---
+title: "catalyst lock — pin dependency versions to a lockfile"
+description: "Generate catalyst.lock to pin git dependencies to 40-character commit hashes and vcpkg dependencies to exact versions and triplets for reproducible builds."
+keywords: ["catalyst lock", "lockfile", "catalyst.lock", "reproducible builds", "pin", "commit hash"]
+---
+
+`catalyst lock` resolves every dependency declared in your `catalyst.yaml` to a precise, reproducible state and writes the result to `catalyst.lock`. Once a lockfile exists, `catalyst fetch` and `catalyst build` use it instead of the loose constraints in your manifest, guaranteeing that every developer and every CI run uses exactly the same code.
+
+## Synopsis
+
+```bash
+catalyst lock [OPTIONS]
+```
+
+## Options
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--profiles` | `-p` | `common` | Profile composition to resolve dependencies for (repeatable) |
+
+## What the lockfile contains
+
+`catalyst.lock` is a YAML file with a `lockfile_version` field and a `dependencies` sequence. Each entry records the information needed to reproduce the exact dependency state.
+
+**Git dependencies**
+
+Catalyst runs `git ls-remote` against the repository URL and resolves the branch, tag, or `latest` specifier to a 40-character commit SHA. The hash, URL, and version are all recorded.
+
+```yaml
+- name: fmt
+  source: git
+  url: https://github.com/fmtlib/fmt.git
+  version: 10.1.0
+  hash: a33701196adfad74917046096bf5a2aa0ab0bb50
+```
+
+**vcpkg dependencies**
+
+The version and triplet are recorded verbatim from `catalyst.yaml` (or the resolved `latest` version after vcpkg resolution).
+
+```yaml
+- name: boost
+  source: vcpkg
+  version: 1.85.0
+  triplet: x64-linux
+```
+
+**Local and system dependencies**
+
+The source type and resolved path are recorded. No network resolution is required.
+
+```yaml
+- name: my-lib
+  source: local
+  path: /absolute/path/to/libs/my-lib
+```
+
+## Workspace lockfiles
+
+In a workspace, `catalyst lock` generates a **single `catalyst.lock`** at the workspace root that covers all workspace members. Dependencies that match workspace member names are excluded from the lockfile — they are resolved to the member's source path at fetch time.
+
+<Note>
+  Commit `catalyst.lock` to version control. This ensures your team and your CI pipelines use the same dependency versions without requiring network access at lock time.
+</Note>
+
+## When the lockfile is honoured
+
+Both `catalyst fetch` and `catalyst build` check for `catalyst.lock` automatically. When the file is present, locked values take precedence over the constraints in `catalyst.yaml`:
+
+- Git: the recorded commit hash is checked out directly, bypassing the version specifier.
+- vcpkg: the locked version and triplet are passed to `vcpkg install`.
+- Local: the locked absolute path is used instead of the relative path in `catalyst.yaml`.
+
+<Warning>
+  If you add or update a dependency in `catalyst.yaml`, re-run `catalyst lock` to regenerate the lockfile. A stale lockfile causes the old pinned version to be used.
+</Warning>
+
+## Examples
+
+<CodeGroup>
+
+```bash Lock all dependencies
+catalyst lock
+```
+
+```bash Lock with specific profiles
+catalyst lock --profiles debug release
+```
+
+</CodeGroup>
+
+After locking, verify the result by inspecting `catalyst.lock`:
+
+```bash
+cat catalyst.lock
+```
+
+```yaml
+lockfile_version: 1.0.0
+dependencies:
+  - name: fmt
+    source: git
+    url: https://github.com/fmtlib/fmt.git
+    version: 10.1.0
+    hash: a33701196adfad74917046096bf5a2aa0ab0bb50
+```

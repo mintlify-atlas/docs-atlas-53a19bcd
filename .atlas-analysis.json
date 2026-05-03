@@ -1,23 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Catalyst",
+  "projectType": "cli-tool",
+  "projectName": "Catalyst",
+  "projectDescription": "A declarative meta build system that brings Cargo-like simplicity to C and C++ projects using YAML configuration.",
   "theme": "aspen",
-  "colors": {
-    "primary": "#94cb04",
-    "light": "#545454"
-  },
-  "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/catalystcpp/catalyst-build-system"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/catalystcpp/catalyst-build-system"
-    }
-  },
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
   "navigation": {
     "tabs": [
       {
@@ -103,5 +91,39 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Declarative YAML configuration — no CMake scripts or Makefiles required",
+    "Profile-based build composition (e.g., debug + asan, release + lto)",
+    "Built-in dependency management for Git, vcpkg, local, and system libraries",
+    "Reproducible builds with lockfile support via catalyst lock",
+    "Workspace support for monorepo multi-package projects",
+    "Lifecycle hooks (pre-build, post-build, codegen, etc.) for custom workflows",
+    "Multiple build backends: CBE (default), Ninja, GNU Make",
+    "Feature flags with preprocessor macro integration",
+    "Watch mode for continuous rebuilds on file changes",
+    "Cross-compilation support via toolchain profiles"
+  ],
+  "publicApiSurface": [
+    "catalyst init",
+    "catalyst build",
+    "catalyst run",
+    "catalyst test",
+    "catalyst clean",
+    "catalyst add",
+    "catalyst fetch",
+    "catalyst lock",
+    "catalyst download",
+    "catalyst generate",
+    "catalyst fmt",
+    "catalyst tidy",
+    "catalyst doc",
+    "catalyst bench",
+    "catalyst pack",
+    "catalyst install",
+    "catalyst ide-sync",
+    "catalyst profile-ls",
+    "catalyst.yaml / CATALYST.yaml configuration schema",
+    "WORKSPACE.yaml workspace configuration"
+  ]
 }

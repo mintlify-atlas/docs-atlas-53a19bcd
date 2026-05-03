@@ -1,0 +1,123 @@
+---
+title: "catalyst build — compile your C++ Catalyst project"
+description: "Compile a Catalyst project with support for profiles, feature flags, watch mode, workspace builds, and pluggable backends including ninja, gmake, and cbe."
+keywords: ["catalyst build", "compile", "profiles", "watch mode", "workspace", "features", "ninja", "gmake", "cbe"]
+---
+
+`catalyst build` compiles the current project (or every member of a workspace) using the configured build backend. On the first run it generates build files automatically; subsequent invocations are incremental. Use profile composition to layer configuration — for example, combining `common` with `debug` — and feature flags to toggle optional compilation units.
+
+## Usage
+
+```text
+catalyst build [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  -r,--regen                  Regenerate the build file
+  -b,--force-rebuild          Recompile dependencies
+  --force-refetch             Refetch dependencies
+  --workspace,--all           Build all members in the workspace
+  -w,--watch                  Continuous build mode. Rebuilds on source file changes
+  -P,--package TEXT           Build a specific package from the root
+  -p,--profiles TEXT ...      Profile composition to build (default: common)
+  -f,--features TEXT ...      Features to enable
+  --backend TEXT              Backend to use for generation (ninja, gmake, cbe)
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-r, --regen` | flag | `false` | Force regeneration of the build file even if one already exists. |
+| `-b, --force-rebuild` | flag | `false` | Recompile all dependencies from source, ignoring cached artifacts. |
+| `--force-refetch` | flag | `false` | Delete and re-download all remote dependencies before building. |
+| `--workspace, --all` | flag | `false` | Build every member in the workspace, ordered by dependency graph. |
+| `-w, --watch` | flag | `false` | Watch source and include directories and rebuild automatically on changes. Press `Ctrl+C` to stop. |
+| `-P, --package` | string | _(empty)_ | Build only the named package (and its dependencies) within the workspace. |
+| `-p, --profiles` | string list | `common` | One or more profile names to compose. Profiles are merged in order. |
+| `-f, --features` | string list | _(empty)_ | Feature flags to enable. Prefix a feature name with `no-` to disable it (e.g. `no-logging`). |
+| `--backend` | string | _(project default)_ | Build backend: `ninja`, `gmake`, or `cbe`. |
+
+## Workspace build ordering
+
+When `--workspace` or `--all` is passed, Catalyst reads every member's manifest, resolves the inter-package dependency graph, and performs a topological sort to determine build order. Packages with no dependents are built first; packages that depend on others wait until their dependencies have finished.
+
+<Note>
+Catalyst detects circular dependencies and logs a warning rather than deadlocking, but circular dependency graphs are not supported and will produce incomplete builds.
+</Note>
+
+If a specific `--package` is named, only that package is built (dependencies in the workspace are assumed to already be up to date).
+
+## Examples
+
+**Standard build:**
+
+```bash
+catalyst build
+```
+
+**Workspace build** — builds all packages in dependency order:
+
+```bash
+catalyst build --workspace
+```
+
+**Build a specific package** — builds only `app` and its workspace dependencies:
+
+```bash
+catalyst build --package app
+```
+
+**Debug build** — compose the `common` and `debug` profiles:
+
+```bash
+catalyst build --profiles common debug
+```
+
+Or, using just the named profile (Catalyst prepends `common` automatically when using profile composition):
+
+```bash
+catalyst build --profiles debug
+```
+
+**Force a clean rebuild of all dependencies:**
+
+```bash
+catalyst build --force-rebuild
+```
+
+**Re-download and rebuild all remote dependencies:**
+
+```bash
+catalyst build --force-refetch
+```
+
+**Enable a feature flag:**
+
+```bash
+catalyst build --features logging
+```
+
+**Disable a feature flag:**
+
+```bash
+catalyst build --features no-logging
+```
+
+**Use the GNU Make backend:**
+
+```bash
+catalyst build --backend gmake
+```
+
+**Watch mode** — rebuild whenever a source or header file changes:
+
+```bash
+catalyst build --watch
+```
+
+Watch mode can be combined with other flags:
+
+```bash
+catalyst build --watch --profiles debug
+```

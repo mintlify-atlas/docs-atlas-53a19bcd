@@ -1,0 +1,34 @@
+---
+title: "Environment variables used by Catalyst"
+description: "CATALYST_MACHINE and CATALYST_VERBOSE are set internally by Catalyst when spawning child processes. Documented here for transparency and advanced use."
+---
+
+Catalyst reads and sets a small number of environment variables at runtime. These variables are managed automatically when Catalyst spawns child Catalyst processes for local dependency resolution and verbose log propagation. They are documented here for transparency and for advanced users who need to understand their effects.
+
+<Note>
+  Both variables described on this page are intended for internal use. You should not need to set them manually under normal circumstances. The documented behaviour of each variable applies whether Catalyst sets it or you do.
+</Note>
+
+## CATALYST_MACHINE
+
+**Type:** Flag — any non-empty value is treated as truthy.
+
+Catalyst sets `CATALYST_MACHINE` when it spawns a child Catalyst process to fetch a local dependency. When this variable is present, the child process skips automatically prepending the `common` profile to its invocation.
+
+This prevents the `common` profile from being injected multiple times as dependency fetches recurse into nested projects, which would cause duplicate compiler flags and configuration conflicts.
+
+<Warning>
+  Setting `CATALYST_MACHINE` manually suppresses `common` profile injection for that invocation. Your project will not receive the base configuration from `catalyst.yaml` unless you pass `common` explicitly via `--profiles`.
+</Warning>
+
+## CATALYST_VERBOSE
+
+**Type:** Flag — any non-empty value is treated as truthy.
+
+Catalyst sets `CATALYST_VERBOSE` when it spawns a child Catalyst process to build a local dependency and verbose logging (`-V`) is enabled on the parent invocation. When this variable is present, the child process enables verbose logging automatically, even without a `-V` flag on its own command line.
+
+This ensures that debug-level log output propagates through the entire dependency build chain, so a single `-V` on the top-level `catalyst build` call produces consistent verbose output across all transitive builds.
+
+<Warning>
+  Setting `CATALYST_VERBOSE` manually enables verbose logging for that invocation regardless of whether `-V` was passed on the command line.
+</Warning>

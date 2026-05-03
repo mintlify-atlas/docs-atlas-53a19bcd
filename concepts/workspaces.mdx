@@ -1,0 +1,113 @@
+---
+title: "Monorepo workspaces and multi-package builds in Catalyst"
+description: "Use WORKSPACE.yaml to manage multiple Catalyst packages in a single repository, with cross-member dependency resolution and a shared lockfile."
+---
+
+Workspaces let you group multiple Catalyst packages under a single repository root and build them together. A workspace is defined by placing a `WORKSPACE.yaml` file at the top of the directory tree. Each member is a standard Catalyst project with its own `catalyst.yaml`; the workspace layer adds discovery, build ordering, and a consolidated lockfile on top.
+
+## Directory structure
+
+A typical workspace looks like this:
+
+```
+my_workspace/
+├── WORKSPACE.yaml
+├── app/
+│   ├── catalyst.yaml
+│   └── src/
+│       └── main.cpp
+└── lib/
+    ├── catalyst.yaml
+    ├── include/
+    │   └── lib.h
+    └── src/
+        └── lib.cpp
+```
+
+Each member directory is a self-contained Catalyst project. The `WORKSPACE.yaml` at the root tells Catalyst how to find them and which profiles to use when loading their configuration.
+
+## WORKSPACE.yaml
+
+`WORKSPACE.yaml` is a map. Each key is a workspace member identifier; each value configures that member.
+
+| Field | Required | Description |
+|---|---|---|
+| `path` | No | Relative path from the workspace root to the member's directory. Defaults to the key name if omitted. |
+| `profiles` | No | List of profiles to apply when loading the member's `catalyst.yaml`. |
+
+```yaml
+# WORKSPACE.yaml
+
+my_lib:
+  path: libs/my_lib
+  profiles: [common, release]
+
+my_app:
+  path: apps/my_app
+  profiles: [common]
+```
+
+---
+
+## Workspace discovery
+
+You do not need to specify where the workspace is when running Catalyst inside a member directory. Catalyst searches upward from the current working directory until it finds a `WORKSPACE.yaml` file and then activates the workspace automatically.
+
+This means you can run `catalyst build` from inside `app/` and Catalyst will find the workspace root, resolve `lib` as a workspace member, and build it before building `app` if `app` depends on it.
+
+---
+
+## Building with a workspace
+
+<Tabs>
+  <Tab title="Build all members">
+    Run `catalyst build --workspace` from anywhere inside the workspace to build every member in dependency order:
+
+    ```bash
+    catalyst build --workspace
+    ```
+  </Tab>
+  <Tab title="Build a single package">
+    Use `--package` to target one specific member by its workspace identifier:
+
+    ```bash
+    catalyst build --package my_app
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Consolidated lockfiles
+
+Running `catalyst lock` at the workspace root generates a single `catalyst.lock` that covers all members defined in `WORKSPACE.yaml`:
+
+```bash
+cd my_workspace
+catalyst lock
+```
+
+The resulting lockfile pins every external dependency used by any member — git dependencies to 40-character commit hashes, vcpkg packages to exact versions and triplets — ensuring that all contributors and CI environments resolve identical revisions. Commit this file to version control alongside `WORKSPACE.yaml`.
+
+<Note>
+  If you run `catalyst lock` inside a member directory rather than the workspace root, Catalyst still generates the lockfile at the workspace root to keep a single authoritative pin file for the whole repository.
+</Note>
+
+---
+
+## Use cases
+
+<CardGroup cols={2}>
+  <Card title="Monorepos" icon="folder-tree">
+    Keep all microservices, libraries, and tools in one repository with consistent dependency versions and a single build command.
+  </Card>
+  <Card title="Shared library development" icon="code-branch">
+    Iterate on a library and an application that consumes it simultaneously. Changes to the library are picked up by the application without publishing to an external registry.
+  </Card>
+  <Card title="Cross-compilation targets" icon="microchip">
+    Define per-member profiles for different target architectures and build them all in one pass with `--workspace`.
+  </Card>
+  <Card title="Test isolation" icon="flask">
+    Keep test binaries in a separate workspace member so they can be built and run independently of the main application.
+  </Card>
+</CardGroup>

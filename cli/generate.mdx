@@ -1,0 +1,94 @@
+---
+title: "catalyst generate — create build scripts"
+description: "Translate your catalyst.yaml manifest into a Ninja build file, Makefile, or CBE build script by resolving sources, flags, and dependencies."
+keywords: ["catalyst", "generate", "ninja", "gmake", "cbe", "build script", "build backend"]
+---
+
+`catalyst generate` reads your `catalyst.yaml` manifest and writes a concrete build file for the selected backend. It resolves source files, include paths, compile flags, feature flags, and dependency links. `catalyst build` calls this command automatically, but you can invoke it directly when you need to inspect or hand-edit the generated file.
+
+## Usage
+
+```bash
+catalyst generate [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-p, --profiles TEXT ...` | Profiles to compose for generation. |
+| `-f, --features TEXT ...` | Feature flags to enable (prefix with `no-` to disable). |
+| `-b, --backend TEXT` | Build backend: `ninja`, `gmake`, or `cbe` (default). |
+| `-h, --help` | Print help and exit. |
+
+## Supported backends
+
+Catalyst supports three build backends. The default is `cbe`.
+
+| Backend | Flag value | Output file |
+|---------|-----------|-------------|
+| Catalyst Build Engine (CBE) | `cbe` | `build/catalyst.build` |
+| Ninja | `ninja` | `build/build.ninja` |
+| GNU Make | `gmake` | `build/Makefile` |
+
+The backend can also be set in `catalyst.yaml` under `meta.generator` so you don't have to pass `--backend` on every invocation:
+
+```yaml
+meta:
+  generator: ninja
+```
+
+<Note>
+  If neither `--backend` nor `meta.generator` is set, Catalyst defaults to CBE.
+</Note>
+
+## What generate does
+
+1. Composes the requested profiles into a single resolved configuration.
+2. Runs any registered `pre-generate` hooks.
+3. Collects source files from `manifest.dirs.source`, then filters them by active feature flags.
+4. Writes compiler variables (`cc`, `cxx`, `cxxflags`, `cflags`, `ldflags`, `ldlibs`) including VCPKG include/library paths when `VCPKG_ROOT` is set.
+5. Writes compile rules and link rules for binaries, static libraries, and shared libraries.
+6. Emits a build edge for every source file, then a final link edge for the project target.
+7. Writes `build/profile_composition.yaml` — a snapshot of the merged configuration used for this build.
+8. Runs any registered `post-generate` hooks.
+
+## Feature flags
+
+Features declared in `catalyst.yaml` under `features` can be toggled at generation time:
+
+```bash
+# Enable a feature
+catalyst generate -f my_feature
+
+# Disable a feature that is on by default
+catalyst generate -f no-my_feature
+```
+
+Each active feature injects a preprocessor definition of the form `-DFF_<NAME>__<FEATURE>=1` (or `=0` when disabled).
+
+## Examples
+
+Generate using the default CBE backend:
+
+```bash
+catalyst generate
+```
+
+Generate a Ninja build file:
+
+```bash
+catalyst generate --backend ninja
+```
+
+Generate a Makefile using the `release` profile:
+
+```bash
+catalyst generate --backend gmake --profiles release
+```
+
+Generate with multiple profiles and a feature flag enabled:
+
+```bash
+catalyst generate --profiles common debug --features my_feature
+```

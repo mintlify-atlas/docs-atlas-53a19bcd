@@ -1,0 +1,191 @@
+---
+title: "Catalyst configuration schema: catalyst.yaml reference"
+description: "Complete reference for catalyst.yaml — covering the meta, manifest, tooling, dirs, dependencies, features, and hooks top-level sections."
+---
+
+Catalyst projects are configured through YAML files. The primary file is `catalyst.yaml`, which defines the `common` base profile applied to every build. You can layer additional named profiles on top of it using `catalyst_<name>.yaml` files, or consolidate everything into a single `CATALYST.yaml` when managing many profiles becomes unwieldy.
+
+## Schema overview
+
+A Catalyst configuration file has five top-level sections:
+
+```yaml
+meta:          # Catalyst tool constraints
+manifest:      # Project identity, toolchain, and directory layout
+dependencies:  # External packages
+features:      # Preprocessor feature flags
+hooks:         # Lifecycle automation scripts
+```
+
+---
+
+## meta
+
+The `meta` section sets constraints on the Catalyst tool itself. Both fields are optional.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `min_ver` | string | `0.0.0` | Minimum Catalyst version required to build the project. Catalyst will refuse to build if the installed version is older. |
+| `generator` | string | `cbe` | Build file generator. Supported values: `cbe` (recommended), `ninja`, `gmake`, `make`. |
+
+```yaml
+meta:
+  min_ver: 1.0.0
+  generator: ninja
+```
+
+---
+
+## manifest
+
+The `manifest` section defines the project's identity and controls how Catalyst locates source files and invokes the compiler.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | string | Current directory name | Project name. Must be unique within a workspace. |
+| `type` | string | `BINARY` | Artifact type: `BINARY`, `STATICLIB`, `SHAREDLIB`, or `INTERFACE`. |
+| `version` | string | `0.0.1` | Project version string. |
+| `description` | string | — | Human-readable project description. |
+| `author` | string | `""` | Project author. Used by `catalyst pack`. |
+| `maintainer` | string | `""` | Package maintainer contact. Used by `catalyst pack`. |
+| `vendor` | string | `"Catalyst"` | Vendor or organization name. Used by `catalyst pack`. |
+| `license_file` | string | `""` | Path to the license file. Used by `catalyst pack`. |
+| `readme_file` | string | `""` | Path to the readme file. Used by `catalyst pack`. |
+| `provides` | string | — | Output artifact name pattern, e.g. `*.so` or `myapp`. |
+
+<Note>
+  `author`, `maintainer`, `vendor`, `license_file`, and `readme_file` are only used by the `catalyst pack` subcommand when generating package metadata.
+</Note>
+
+### manifest.tooling
+
+The `tooling` subsection overrides the compiler and linker used for this profile.
+
+| Field | Default | Description |
+|---|---|---|
+| `CC` | `clang` | C compiler binary. |
+| `CXX` | `clang++` | C++ compiler binary. |
+| `CC_LAUNCHER` | `""` | Launcher prefix for the C compiler (e.g., `ccache`). |
+| `CXX_LAUNCHER` | `""` | Launcher prefix for the C++ compiler (e.g., `ccache`). |
+| `CCFLAGS` | `""` | Flags passed to the C compiler. |
+| `CXXFLAGS` | `""` | Flags passed to the C++ compiler. |
+| `LDFLAGS` | `""` | Flags passed to the linker. |
+
+```yaml
+manifest:
+  tooling:
+    CXX: clang++
+    CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
+    LDFLAGS: -static
+```
+
+### manifest.dirs
+
+The `dirs` subsection configures where Catalyst looks for source files and where it places build output.
+
+| Field | Default | Description |
+|---|---|---|
+| `include` | `[include]` | List of include directories passed to the compiler with `-I`. |
+| `source` | `[src]` | List of source directories scanned recursively for `.c` and `.cpp` files. |
+| `build` | `build` | Output directory for compiled objects and the final artifact. |
+
+<Note>
+  `dirs.source` is recursive. To exclude specific files or directories from compilation, add them to a `.catalystignore` file at the project root.
+</Note>
+
+```yaml
+manifest:
+  dirs:
+    include: [include, third_party/include]
+    source: [src]
+    build: build
+```
+
+---
+
+## dependencies
+
+The `dependencies` key holds a list of external packages. Catalyst supports four dependency sources: `git`, `vcpkg`, `local`, and `system`.
+
+```yaml
+dependencies:
+  - name: fmt
+    source: git
+    url: https://github.com/fmtlib/fmt.git
+    version: 10.0.0
+```
+
+See [Dependency management](/concepts/dependencies) for the full schema, CLI shortcuts, and lockfile usage.
+
+---
+
+## features
+
+Features are named boolean flags that can be toggled per profile or from the CLI. Enabling a feature defines a preprocessor macro of the same name. Features can also declare a list of source files that are only compiled when the feature is enabled.
+
+```yaml
+features:
+  logging: true
+  work_estimates:
+    default: true
+    files: ["src/work_estimate.cpp"]
+```
+
+In the example above, `logging` is always enabled and adds `-DLOGGING` to the compiler invocation. `work_estimates` is also on by default and additionally compiles `src/work_estimate.cpp` only when the feature is active.
+
+---
+
+## hooks
+
+The `hooks` section runs commands at named points in the build lifecycle — before and after fetch, generate, build, test, and more.
+
+```yaml
+hooks:
+  pre-build:
+    - command: "echo 'Starting build...'"
+  post-build:
+    - script: "scripts/notify.sh"
+```
+
+See [Lifecycle hooks](/concepts/hooks) for all available hook names, hook types (`command`, `script`, `catalyst`, `codegen`), and advanced codegen variable substitution.
+
+---
+
+## Centralized configuration
+
+When a project defines many profiles, scattering them across `catalyst.yaml`, `catalyst_debug.yaml`, `catalyst_release.yaml`, etc. can clutter the project root. `CATALYST.yaml` (uppercase) consolidates all profiles into a single file, using profile names as top-level keys:
+
+```yaml
+# CATALYST.yaml
+common:
+  manifest:
+    name: my-app
+    version: 1.0.0
+    tooling:
+      CXX: clang++
+      CXXFLAGS: --std=c++23 -Wall -Wextra
+
+debug:
+  manifest:
+    tooling:
+      CXXFLAGS: -g --std=c++23 -Wall -Wextra
+
+release:
+  manifest:
+    tooling:
+      CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra
+      LDFLAGS: -static -flto=full
+
+test:
+  manifest:
+    name: my-app-tests
+    dirs:
+      source: [tests]
+      build: build/test
+```
+
+When `CATALYST.yaml` is present, Catalyst loads profiles from it first. If a requested profile is not found there, it falls back to the corresponding `catalyst_<profile>.yaml` file.
+
+<Tip>
+  The Catalyst build system's own configuration uses `CATALYST.yaml` with profiles for `common`, `debug`, `release`, `test`, `ccache`, and several cross-compilation targets. Browse it at the root of the repository for a real-world example.
+</Tip>

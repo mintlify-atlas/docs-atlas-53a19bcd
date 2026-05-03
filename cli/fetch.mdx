@@ -1,0 +1,83 @@
+---
+title: "catalyst fetch — download and prepare all dependencies"
+description: "Fetch remote dependencies for a profile composition, respecting catalyst.lock when present, to prepare for offline builds or CI environments."
+keywords: ["catalyst fetch", "dependencies", "lockfile", "vcpkg", "git", "offline"]
+---
+
+`catalyst fetch` downloads and prepares all dependencies declared in your `catalyst.yaml` for the active profile composition. It is called automatically by `catalyst build`, but you can run it separately to warm a cache, pre-populate a CI environment, or verify that all dependencies resolve before starting a build.
+
+## Synopsis
+
+```bash
+catalyst fetch [OPTIONS]
+```
+
+## Options
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--profiles` | `-p` | — | Profile composition to fetch dependencies for (repeatable) |
+
+## How fetch works
+
+Catalyst processes each dependency type as follows:
+
+**Git dependencies**
+
+Catalyst clones the repository into `.catalyst-build/catalyst-libs/<name>` using a shallow clone when no lockfile hash is present. If `catalyst.lock` exists and contains a commit hash for the dependency, Catalyst performs a full clone and checks out the exact hash instead.
+
+If a dependency already exists in the build directory, Catalyst skips it without re-cloning.
+
+**vcpkg dependencies**
+
+Catalyst runs `vcpkg install <name>` using the executable found at `$VCPKG_ROOT/vcpkg`. The `VCPKG_ROOT` environment variable must be set. The triplet and version recorded in `catalyst.lock` take precedence over the values in `catalyst.yaml` when the lockfile is present.
+
+**Local dependencies**
+
+Catalyst recursively invokes `catalyst build` in the referenced directory. Cycle detection is active: if a local dependency (directly or transitively) depends on the package being built, the fetch fails immediately with a cycle error.
+
+**System dependencies**
+
+No network or filesystem operation is performed. Catalyst logs the dependency as skipped; presence is verified by the build step via `pkg-config`.
+
+## Parallelism
+
+Git and system dependencies are fetched concurrently. vcpkg installs and local dependency builds run serially to avoid shared-state conflicts.
+
+## Lockfile behaviour
+
+When `catalyst.lock` exists in the project root (or workspace root), `catalyst fetch` reads it before processing any dependency. Locked values override loose constraints from `catalyst.yaml`:
+
+- Git: the locked commit hash is used for checkout.
+- vcpkg: the locked version and triplet are passed to `vcpkg install`.
+- Local: the locked path replaces the path in `catalyst.yaml`.
+
+<Tip>
+  Run `catalyst lock` before `catalyst fetch` in CI to ensure every build uses the exact same dependency versions.
+</Tip>
+
+## Workspace behaviour
+
+In a workspace, `catalyst fetch` resolves dependency names against workspace members first. If a dependency name matches a member package, Catalyst creates a directory symlink from the build directory to the member's source path instead of cloning or installing.
+
+## Examples
+
+<CodeGroup>
+
+```bash Fetch all dependencies
+catalyst fetch
+```
+
+```bash Fetch for a specific profile
+catalyst fetch --profiles debug
+```
+
+```bash Fetch a composed profile
+catalyst fetch --profiles release optimization
+```
+
+</CodeGroup>
+
+<Note>
+  `catalyst build` calls `catalyst fetch` automatically. You only need to run `catalyst fetch` directly when you want to pre-populate dependencies without triggering a full build — for example, in a CI caching step.
+</Note>

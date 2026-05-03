@@ -1,0 +1,51 @@
+---
+title: "catalyst clean — remove compiled build artifacts"
+description: "Delete compiled build artifacts for one or more profiles by invoking the underlying backend's clean target, with optional workspace-wide cleaning."
+keywords: ["catalyst clean", "remove artifacts", "clean build", "workspace clean", "ninja clean", "cbe clean"]
+---
+
+`catalyst clean` removes compiled output for the specified profile by delegating to the underlying build backend's clean target (`ninja -t clean` or `cbe -t clean`). Running `catalyst clean` from the root of a workspace automatically cleans every member. Pre- and post-clean hooks defined in the project are executed around the operation.
+
+## Usage
+
+```text
+catalyst clean [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  -p,--profile TEXT ...       Profiles to clean (default: common)
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-p, --profile` | string list | `common` | One or more profile names whose build artifacts should be removed. `common` is always prepended if not already present. |
+
+<Tip>
+To remove the entire build directory rather than invoking the backend's clean target, delete the configured build directory directly (default: `build/`). This is more thorough but slower, as it discards the generated build files too.
+</Tip>
+
+## Workspace clean
+
+When executed from a workspace root, `catalyst clean` iterates over every workspace member and runs the clean operation in each member's directory. Individual failures are logged but the command continues cleaning remaining members before reporting the combined result.
+
+## Examples
+
+**Clean the default (common) profile:**
+
+```bash
+catalyst clean
+```
+
+**Clean a specific profile:**
+
+```bash
+catalyst clean --profile debug
+```
+
+**Clean multiple profiles at once:**
+
+```bash
+catalyst clean --profile debug --profile release
+```

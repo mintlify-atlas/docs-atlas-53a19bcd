@@ -1,0 +1,145 @@
+---
+title: "Dependency management with git, vcpkg, local, and system"
+description: "Declare external packages using git, vcpkg, local, or system sources, add them from the CLI, and pin exact versions with a lockfile."
+---
+
+Catalyst has built-in dependency management that eliminates the need for separate package manager configuration files. You declare dependencies directly in `catalyst.yaml` under the `dependencies` key, and Catalyst handles fetching, building, and linking them automatically.
+
+## Dependency sources
+
+Catalyst supports four source types. Each dependency entry requires at least a `name` and a `source` field; the remaining fields depend on the source.
+
+### git
+
+Fetches and builds a library from a remote Git repository. Catalyst clones the repository at the specified version and builds it as part of your project's dependency graph.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Identifier for the dependency. |
+| `source` | Yes | Must be `git`. |
+| `url` | Yes | HTTPS or SSH Git repository URL. |
+| `version` | Yes | Tag, branch name, or commit hash to check out. |
+| `using` | No | List of library features to enable (passed to the dependency's build). |
+
+```yaml
+dependencies:
+  - name: fmt
+    source: git
+    url: https://github.com/fmtlib/fmt.git
+    version: 10.0.0
+
+  - name: spdlog
+    source: git
+    url: https://github.com/gabime/spdlog.git
+    version: v1.12.0
+    using: [header_only]
+```
+
+### vcpkg
+
+Resolves the dependency through a local or bootstrapped `vcpkg` installation. Catalyst invokes `vcpkg install` on your behalf.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Package name in the vcpkg registry. |
+| `source` | Yes | Must be `vcpkg`. |
+| `version` | No | Package version. Omit to use the latest available. |
+| `triplet` | No | vcpkg triplet (e.g., `x64-linux`, `arm64-osx`). Defaults to the vcpkg default triplet. |
+| `using` | No | List of vcpkg package features to enable. |
+| `linkage` | No | How the library is linked: `shared` (default), `static`, or `interface`. |
+
+```yaml
+dependencies:
+  - name: nlohmann-json
+    source: vcpkg
+    version: 3.11.2
+    triplet: x64-linux
+
+  - name: yaml-cpp
+    source: vcpkg
+    triplet: x64-linux
+    version: latest
+```
+
+### local
+
+Builds a dependency from the local filesystem. Catalyst treats the target directory as a full Catalyst project and builds it with the profiles you specify before linking it into the current project.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Identifier for the dependency. Must match the project's `manifest.name`. |
+| `source` | Yes | Must be `local`. |
+| `path` | Yes | Relative or absolute path to the dependency's project root. |
+| `profiles` | No | List of profiles to apply when building the dependency. |
+
+```yaml
+dependencies:
+  - name: my-lib
+    source: local
+    path: ../libs/my-lib
+    profiles: [common, release]
+```
+
+<Tip>
+  Local dependencies are especially useful in workspaces, where Catalyst can resolve member packages by name without hardcoding paths.
+</Tip>
+
+### system
+
+Locates a library already installed on the host system using `pkg-config`. This is the lightest-weight option — Catalyst calls `pkg-config --cflags` and `pkg-config --libs` to get the include and link flags.
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | `pkg-config` package name (e.g., `openssl`, `libcurl`). |
+| `source` | Yes | Must be `system`. |
+| `lib` | No | Explicit library path to use instead of the `pkg-config` result. |
+| `include` | No | Explicit include path to use instead of the `pkg-config` result. |
+| `linkage` | No | How the library is linked: `shared` (default), `static`, or `interface`. Use `interface` for header-only libraries that require no linking. |
+
+```yaml
+dependencies:
+  - name: openssl
+    source: system
+
+  - name: cli11
+    source: system
+    linkage: interface
+```
+
+---
+
+## Adding dependencies via CLI
+
+You can append dependencies to your `catalyst.yaml` without editing it by hand using `catalyst add`:
+
+```bash
+# Add a git dependency
+catalyst add git https://github.com/fmtlib/fmt.git -v 10.0.0
+
+# Add a vcpkg dependency with a triplet
+catalyst add vcpkg nlohmann-json -t x64-linux
+```
+
+The command writes the new entry to the `dependencies` list in your configuration and exits. Run `catalyst fetch` afterward to download the newly added package.
+
+---
+
+## Reproducible builds with lockfiles
+
+By default, dependencies pinned to a branch name or `latest` version may resolve differently on different machines or at different points in time. To eliminate this non-determinism, generate a lockfile:
+
+```bash
+catalyst lock
+```
+
+This creates a `catalyst.lock` file at the project root (or workspace root, if running inside a workspace). The lockfile pins:
+
+- **git** dependencies to a full 40-character commit hash.
+- **vcpkg** dependencies to their exact resolved version and triplet.
+- **local** and **system** dependencies to their resolved paths.
+
+Once a `catalyst.lock` is present, `catalyst fetch` and `catalyst build` read version information from it instead of the loose constraints in `catalyst.yaml`. Commit the lockfile to version control so every contributor and CI job builds against identical dependency revisions.
+
+<Warning>
+  Delete or regenerate `catalyst.lock` (via `catalyst lock`) whenever you intentionally upgrade a dependency. Leaving a stale lockfile will prevent the upgrade from taking effect.
+</Warning>

@@ -1,0 +1,179 @@
+---
+title: "Lifecycle hooks for build and test automation in Catalyst"
+description: "Run custom logic at any build stage using command, script, catalyst, and codegen hook types, with incremental codegen and file change detection."
+---
+
+Hooks let you attach custom logic to specific points in the Catalyst build lifecycle without modifying your source code or wrapping the `catalyst` binary in shell scripts. They are declared in `catalyst.yaml` under the `hooks` key and participate in profile composition, so a `debug` profile can add hooks that only run during debug builds.
+
+## Hook types
+
+Catalyst supports four hook types:
+
+<CardGroup cols={2}>
+  <Card title="command" icon="terminal">
+    Runs a shell command via `sh -c` (or `cmd /c` on Windows).
+  </Card>
+  <Card title="script" icon="file-code">
+    Runs a script file via `sh -c` (or `cmd /c` on Windows).
+  </Card>
+  <Card title="catalyst" icon="bolt">
+    Dispatches a Catalyst subcommand internally without spawning a child process. Preferred for invoking other Catalyst commands.
+  </Card>
+  <Card title="codegen" icon="code">
+    Runs a command for code generation with optional incremental dependency tracking based on file modification times.
+  </Card>
+</CardGroup>
+
+A quick example showing all four types in a single configuration:
+
+```yaml
+hooks:
+  pre-build:
+    - command: "echo 'Starting build...'"
+    - catalyst: "test --help"       # short string form
+  post-build:
+    - command: "echo 'Build finished!'"
+    - script: "scripts/notify.sh"
+    - catalyst:                      # structured map form
+        subcommand: clean
+        args: ["--workspace"]
+  on-build-failure:
+    - command: "echo 'Build failed!'"
+```
+
+---
+
+## The catalyst hook type
+
+The `catalyst` hook dispatches a subcommand internally, sharing the current configuration context and workspace state with the parent invocation. This avoids the overhead of shelling out and ensures the hook respects the same workspace and project resolution.
+
+**Recursion protection:** Catalyst enforces a maximum dispatch depth of 4 and always rejects direct recursion (a `pre-build` hook cannot trigger `build`).
+
+### Short form
+
+A plain string parsed the same way as the command line:
+
+```yaml
+hooks:
+  post-build:
+    - catalyst: "test -p release"
+    - catalyst: "-V generate --backend ninja"
+```
+
+### Structured form
+
+An explicit map that separates subcommand, arguments, global flags, and profiles:
+
+```yaml
+hooks:
+  post-build:
+    - catalyst:
+        subcommand: test
+        profiles: [release]
+        args: ["--verbose"]
+  pre-build:
+    - catalyst:
+        subcommand: generate
+        global_args: ["-V"]
+        args: ["--backend", "ninja"]
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `subcommand` | string | Yes | The Catalyst subcommand to invoke (e.g., `test`, `generate`, `clean`). |
+| `args` | list[string] | No | Arguments passed to the subcommand. |
+| `global_args` | list[string] | No | Arguments placed before the subcommand (e.g., `-V` for verbose). |
+| `profiles` | list[string] | No | Shorthand for `-p <profile>` arguments. |
+
+<Note>
+  A `catalyst` hook does **not** inherit the parent invocation's global flags or profiles. Each hook invocation is independent.
+</Note>
+
+---
+
+## The codegen hook type
+
+The `codegen` hook is designed for source-generation tasks where you want incremental behaviour: the command only runs if any output file is missing or any input file is newer than the oldest output file.
+
+| Field | Required | Description |
+|---|---|---|
+| `cmd` | Yes | The shell command to execute. Supports variable substitution (see below). |
+| `input` | No | A file path or list of file paths the command reads from. |
+| `output` | No | A file path or list of file paths the command produces. |
+
+When both `input` and `output` are provided, Catalyst compares modification times and skips the command if outputs are already up to date. If either field is omitted, the command runs unconditionally.
+
+### Variable substitution
+
+The `cmd` field supports `$IN` and `$OUT` variables that expand to the declared input and output file paths, with Python-style slice syntax. Catalyst handles space-escaping automatically when paths are substituted.
+
+| Variable | Replaced with |
+|---|---|
+| `$IN[i]` | The input file at zero-based index `i`. |
+| `$IN[-k]` | The input file at position `len - k` (e.g., `$IN[-1]` is the last input). |
+| `$IN[start:stop]` | Input files from `start` up to (not including) `stop`, space-joined. |
+| `$IN[start:stop:step]` | Every `step`-th input file in the range, space-joined. |
+| `$IN` | All input files, space-joined. Equivalent to `$IN[:]`. |
+
+The same syntax applies identically to `$OUT`.
+
+**Slice semantics** follow Python conventions: missing bounds default to the list extremes, negative bounds count from the end, negative step iterates in reverse, and out-of-bounds slice indices are clamped rather than causing an error.
+
+**Errors:** An out-of-bounds strict index (e.g., `$IN[5]` when only two inputs exist) is a build error. A step of zero (`$IN[::0]`) is also an error. To pass the literal string `$IN` to the shell without substitution, prefix it with an extra `$`: `$$IN` becomes `$IN`.
+
+```yaml
+hooks:
+  pre-generate:
+    - codegen:
+        cmd: "python3 tools/generate.py --config $IN[0] --sources $IN[1:]"
+        input: ["config.yaml", "src/a.proto", "src/b.proto", "src/c.proto"]
+        output: ["gen/output.cc"]
+
+    - codegen:
+        cmd: "python3 tools/codegen.py $IN --outputs $OUT[:-1] --manifest $OUT[-1]"
+        input: ["schema.json"]
+        output: ["gen/types.h", "gen/types.cc", "gen/manifest.txt"]
+```
+
+---
+
+## Available hooks
+
+### Global hooks
+
+Run once around the complete build pipeline, regardless of which subcommand triggered it.
+
+| Hook | Triggered |
+|---|---|
+| `pre-build` | Once before the entire build begins (before generate, fetch, and compile). |
+| `post-build` | Once after the build completes successfully. |
+| `on-build-failure` | If the build fails at any stage. Useful for notifications or cleanup. |
+
+### Subcommand hooks
+
+| Hook | Triggered |
+|---|---|
+| `pre-generate` | Before build files are generated. |
+| `post-generate` | After build files are generated. |
+| `pre-fetch` | Before any dependencies are fetched. |
+| `post-fetch` | After all dependencies have been fetched. |
+| `pre-clean` | Before the project is cleaned. |
+| `post-clean` | After the project has been cleaned. |
+| `pre-run` | Before the built binary is executed. |
+| `post-run` | After the built binary exits. |
+| `pre-test` | Before the test binary is executed. |
+| `post-test` | After the test binary exits. |
+| `pre-bench` | Before benchmarks are executed. |
+| `post-bench` | After benchmarks complete. |
+
+### Target-specific and file-specific hooks
+
+<Note>
+  The following hooks are defined in the schema but are **not yet implemented**. Defining them in your configuration is valid but currently has no effect.
+
+  | Hook | Intended trigger |
+  |---|---|
+  | `pre-link` | Before a build target is linked. |
+  | `post-link` | After a build target is linked. |
+  | `on-compile` | When a specific source file is compiled. |
+</Note>

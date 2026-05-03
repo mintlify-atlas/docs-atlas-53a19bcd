@@ -1,0 +1,78 @@
+---
+title: "catalyst ide-sync — sync IDE config files"
+description: "Regenerate IDE project files including compile_commands.json for clangd/LSP, VS Code settings, and CLion configuration from your Catalyst project."
+keywords: ["catalyst", "ide-sync", "compile_commands.json", "clangd", "vscode", "clion", "LSP", "IDE"]
+---
+
+`catalyst ide-sync` regenerates IDE project files based on your current Catalyst configuration. It produces `compile_commands.json` for use with clangd and other Language Server Protocol (LSP) clients, as well as native project files for VS Code and CLion. Run this command after modifying your project structure, adding dependencies, or changing build settings.
+
+## Usage
+
+```bash
+catalyst ide-sync [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-p, --profiles TEXT ...` | Profiles to use from the configuration file (default: `common`). |
+| `--ides ENUM ...` | IDEs to generate project files for: `vscode`, `clion`. |
+| `-f, --force-ide` | Force overwrite of existing IDE configuration files. |
+| `-h, --help` | Print help and exit. |
+
+## What ide-sync generates
+
+| IDE | Generated file(s) | Used by |
+|-----|-------------------|---------|
+| All | `compile_commands.json` | clangd, `clang-tidy`, `clang-format` |
+| `vscode` | `.vscode/c_cpp_properties.json` | VS Code C/C++ extension |
+| `clion` | CLion project metadata | CLion IDE |
+
+<Note>
+  `compile_commands.json` is required by `catalyst tidy` and by any editor that uses clangd for code completion, go-to-definition, and diagnostics. Run `catalyst ide-sync` after your initial project setup and after any structural changes.
+</Note>
+
+## Force overwrite
+
+By default, `catalyst ide-sync` skips generating IDE files that already exist. Pass `--force-ide` to overwrite existing configuration:
+
+```bash
+catalyst ide-sync --force-ide
+```
+
+<Tip>
+  Use `--force-ide` when you update your `catalyst.yaml` with new include directories or flags and your IDE is not picking up the changes.
+</Tip>
+
+## Examples
+
+Sync IDE configuration using the default profile:
+
+```bash
+catalyst ide-sync
+```
+
+Generate configuration for VS Code only:
+
+```bash
+catalyst ide-sync --ides vscode
+```
+
+Generate configuration for both VS Code and CLion:
+
+```bash
+catalyst ide-sync --ides vscode clion
+```
+
+Force regeneration even if IDE files already exist:
+
+```bash
+catalyst ide-sync --force-ide
+```
+
+Sync with specific profiles:
+
+```bash
+catalyst ide-sync --profiles common debug
+```

@@ -1,0 +1,58 @@
+---
+title: "catalyst fmt — format C/C++ source code"
+description: "Run clang-format in-place across all C/C++ source and header files using the .clang-format file in your project root. Reads FMT from manifest.tooling."
+keywords: ["catalyst", "fmt", "clang-format", "format", "code style", "C++"]
+---
+
+`catalyst fmt` runs `clang-format -i` on every C/C++ source and header file found under your project's source and include directories. It uses whatever `.clang-format` file is present in your project root, so formatting style is controlled entirely by that file.
+
+## Usage
+
+```bash
+catalyst fmt [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-h, --help` | Print help and exit. |
+
+<Note>
+  `catalyst fmt` does not accept a `--profiles` flag. It reads source and include directories from the default profile composition.
+</Note>
+
+## How it works
+
+1. Composes the active profiles to resolve `manifest.dirs.source` and `manifest.dirs.include`.
+2. Reads `manifest.tooling.FMT` to determine the formatter binary (defaults to `clang-format`).
+3. Recursively walks each source directory and collects files with `.c`, `.cc`, or `.cpp` extensions.
+4. Recursively walks each include directory and collects files with `.h` or `.hpp` extensions.
+5. Runs the formatter with the `-i` (in-place) flag, batching files to stay within OS argument-length limits (128 KiB per invocation).
+
+<Warning>
+  `catalyst fmt` modifies files in place. Make sure your working tree is clean or your changes are staged before running it, so you can review the diff.
+</Warning>
+
+## Prerequisites
+
+A `.clang-format` file must exist in the project root. Without it, `clang-format` will fall back to its built-in defaults, which may not match your intended style.
+
+```bash
+# Create a .clang-format file based on the LLVM style
+clang-format --style=LLVM --dump-config > .clang-format
+```
+
+## Examples
+
+Format all source and header files in the project:
+
+```bash
+catalyst fmt
+```
+
+Check what would change without applying edits (using clang-format directly):
+
+```bash
+clang-format --dry-run -Werror src/**/*.cpp
+```

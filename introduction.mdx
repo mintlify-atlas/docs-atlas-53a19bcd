@@ -1,0 +1,94 @@
+---
+title: "Catalyst: Declarative Build System for C/C++"
+description: "Catalyst brings Cargo-like simplicity to C and C++ projects. Replace CMake scripts and Makefiles with clean YAML configuration and reproducible builds."
+---
+
+Catalyst is a declarative meta build system designed to modernize C and C++ workflows. Instead of wrestling with complex CMake scripts or fragile Makefiles, you describe your project in a simple YAML file and let Catalyst handle compilation, dependency management, and build orchestration.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Build Catalyst from source and get your environment ready in minutes.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Create, build, and run your first Catalyst project step by step.
+  </Card>
+  <Card title="Configuration Reference" icon="file-code" href="/concepts/configuration">
+    Explore the full catalyst.yaml schema — manifest, tooling, deps, hooks.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/index">
+    Every command Catalyst provides, with flags and real examples.
+  </Card>
+</CardGroup>
+
+## Why Catalyst?
+
+C and C++ builds have historically required learning a separate scripting language — CMake's DSL, Makefile syntax, or Meson's Python-like dialect. Catalyst replaces that with a single, readable YAML file that any developer can understand at a glance.
+
+<CardGroup cols={2}>
+  <Card title="Declarative YAML" icon="code">
+    Project structure, compiler flags, and dependencies all in one file. No scripting.
+  </Card>
+  <Card title="Profile composition" icon="layer-group">
+    Compose build configurations like `debug + asan` or `release + lto` on the command line.
+  </Card>
+  <Card title="Built-in dependency management" icon="box">
+    Native support for vcpkg, Git repos, local packages, and system libraries.
+  </Card>
+  <Card title="Reproducible builds" icon="lock">
+    Lock dependency versions with `catalyst lock` for consistent builds everywhere.
+  </Card>
+  <Card title="Workspace support" icon="folder-open">
+    Manage monorepos with multiple packages and automatic build ordering.
+  </Card>
+  <Card title="Lifecycle hooks" icon="bolt">
+    Run custom commands or scripts before and after any build stage.
+  </Card>
+</CardGroup>
+
+## Quick look
+
+A minimal `catalyst.yaml` that builds a C++20 binary and pulls in the `fmt` library:
+
+```yaml catalyst.yaml
+manifest:
+  name: my-app
+  type: BINARY
+  version: 0.1.0
+  tooling:
+    CXX: clang++
+    CXXFLAGS: -std=c++20 -Wall -Wextra
+  dirs:
+    include: [include]
+    source: [src]
+    build: build
+
+dependencies:
+  - name: fmt
+    source: git
+    url: https://github.com/fmtlib/fmt.git
+    version: 10.0.0
+```
+
+Then build and run:
+
+```bash
+catalyst build
+catalyst run
+```
+
+## Core commands
+
+| Command | Description |
+|---|---|
+| `catalyst init` | Create a new project |
+| `catalyst build` | Build the project |
+| `catalyst run` | Run the built binary |
+| `catalyst test` | Run project tests |
+| `catalyst add` | Add a dependency |
+| `catalyst lock` | Pin dependency versions |
+
+See the full [CLI Reference](/cli/index) for all commands.
+
+<Note>
+  Catalyst is under active development. Expect breaking changes as the project evolves toward a stable 1.x release.
+</Note>

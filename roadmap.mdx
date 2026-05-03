@@ -1,0 +1,55 @@
+---
+title: "Catalyst roadmap and planned features"
+description: "Overview of implemented and planned Catalyst subcommands, including metadata output, tree visualization, registry publishing, and dependency management."
+---
+
+The Catalyst roadmap tracks subcommands that are fully implemented, actively planned, and explicitly out of scope. It reflects the current direction of the project and is updated as priorities shift.
+
+<Note>
+  Catalyst is in early-stage development. The roadmap is subject to change. If a planned feature matters to your use case, open an issue to express interest or contribute.
+</Note>
+
+## Implemented
+
+These subcommands are available in the current release.
+
+| Subcommand | Description |
+|---|---|
+| `catalyst pack` | Assemble the local package for distribution. |
+| `catalyst bench` | Execute all benchmarks for the local package. |
+| `catalyst doc` | Build the package's documentation. |
+| `catalyst lock` | Generate and write the lockfile for the package (previously `generate-lockfile`). |
+
+## Planned
+
+These subcommands are on the roadmap but not yet implemented.
+
+<AccordionGroup>
+  <Accordion title="metadata">
+    Output the resolved dependency tree for the package in a machine-readable format. Includes the concrete versions used after overrides are applied. Intended for tooling integration and CI pipelines.
+  </Accordion>
+  <Accordion title="owner">
+    Manage the owners of a package on the Catalyst registry. Allows adding and removing users who have permission to publish new versions of a package.
+  </Accordion>
+  <Accordion title="publish">
+    Upload a package to the Catalyst registry. Packages must pass validation checks before publication.
+  </Accordion>
+  <Accordion title="remove">
+    Remove one or more dependencies from the `catalyst.yaml` manifest. The inverse of `catalyst add`.
+  </Accordion>
+  <Accordion title="tree">
+    Display a tree visualisation of the project's dependency graph. Useful for understanding transitive dependencies and version resolution.
+  </Accordion>
+</AccordionGroup>
+
+## Out of scope
+
+The following subcommands are explicitly out of scope for Catalyst and will not be implemented.
+
+`report`, `update`, `vendor`, `version`, `yank`, `help`, `info`, `locate-project`, `login`, `logout`, `install`, `uninstall`, `pkgid`, `search`
+
+These were evaluated and excluded because they either duplicate functionality available in other tools, fall outside Catalyst's design goals, or are better handled at the OS or package manager level.
+
+---
+
+To request a feature or track the status of a planned item, visit [GitHub Issues](https://github.com/CatalystCPP/catalyst-build-system/issues).

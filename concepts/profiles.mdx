@@ -1,0 +1,180 @@
+---
+title: "Build profile composition and inheritance in Catalyst"
+description: "Define, compose, and inherit build configurations like debug, release, and asan using Catalyst profiles and left-to-right merging."
+---
+
+A single `catalyst.yaml` rarely covers every scenario you'll encounter across a project's lifecycle. Debug builds need symbols and sanitizers; release builds need aggressive optimization; CI may need a special combination of both. Profiles let you express each variation as a named configuration layer that can be mixed and matched at build time without duplicating shared settings.
+
+## Defining profiles
+
+Catalyst resolves profiles from two file conventions:
+
+- **`catalyst.yaml`** — always loaded as the `common` base profile.
+- **`catalyst_<name>.yaml`** — defines a profile named `<name>`.
+
+Every build starts from `common` and then merges any additional profiles you request on top of it.
+
+<CodeGroup>
+
+```yaml catalyst.yaml (common)
+manifest:
+  name: my-app
+  version: 1.0.0
+  tooling:
+    CXX: clang++
+    CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
+  dirs:
+    include: [include]
+    source: [src]
+    build: build
+```
+
+```yaml catalyst_debug.yaml
+manifest:
+  tooling:
+    CXXFLAGS: -g --std=c++23 -Wall -Wextra -Wpedantic
+```
+
+```yaml catalyst_release.yaml
+manifest:
+  tooling:
+    CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
+    LDFLAGS: -static
+```
+
+</CodeGroup>
+
+## Composition
+
+Pass multiple profile names to `--profiles` (or `-p`) and Catalyst merges them left to right. Each subsequent profile overwrites any field it redefines; fields not mentioned are inherited unchanged.
+
+```bash
+catalyst build --profiles debug release
+```
+
+The merge order is:
+
+<Steps>
+  <Step title="Load common">
+    `catalyst.yaml` is always the starting point.
+  </Step>
+  <Step title="Merge debug">
+    Fields from `catalyst_debug.yaml` are applied on top.
+  </Step>
+  <Step title="Merge release">
+    Fields from `catalyst_release.yaml` override anything set by `debug`.
+  </Step>
+</Steps>
+
+This makes powerful combinations straightforward to express:
+
+```bash
+catalyst build -p linux debug asan
+catalyst build -p release lto
+```
+
+## Nulling fields
+
+To remove a field or entire section that was set by an earlier profile, assign it `null`. This lets a later profile cleanly unset values rather than being forced to override them with empty strings or placeholder values.
+
+```yaml
+# catalyst_custom.yaml
+meta: null   # removes the meta section entirely
+```
+
+## Reserved profiles
+
+Three profile names have special meaning in Catalyst:
+
+| Profile | Loaded automatically by |
+|---|---|
+| `common` | Every command (always the base layer) |
+| `test` | `catalyst test` |
+| `bench` | `catalyst bench` |
+
+When you run `catalyst test`, Catalyst merges `common` + `test` without requiring you to pass `-p test` explicitly. You can still pass additional profiles on top: `catalyst test -p debug`.
+
+## Centralized definition
+
+When many profiles exist, managing one `catalyst_*.yaml` file per profile clutters the project root. Catalyst supports a `CATALYST.yaml` (uppercase) file that holds all profiles under a single roof:
+
+```yaml
+# CATALYST.yaml
+common:
+  manifest:
+    name: my-app
+    version: 1.0.0
+    tooling:
+      CXX: clang++
+      CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
+
+debug:
+  manifest:
+    tooling:
+      CXXFLAGS: -g --std=c++23 -Wall -Wextra -Wpedantic
+
+release:
+  manifest:
+    tooling:
+      CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
+      LDFLAGS: -static -flto=full
+
+test:
+  manifest:
+    name: my-app-tests
+    dirs:
+      source: [tests]
+      build: build/test
+```
+
+When `CATALYST.yaml` is present, it takes priority. If a requested profile is absent from it, Catalyst falls back to the matching `catalyst_<profile>.yaml` file.
+
+## Real-world example
+
+The Catalyst build system itself is configured with `CATALYST.yaml`. Its profiles show several common patterns:
+
+```yaml
+# Excerpt from the Catalyst repository's own CATALYST.yaml
+common:
+  meta:
+    min_ver: 1.0.0
+  manifest:
+    name: catalyst
+    type: BINARY
+    version: 1.3.0
+    tooling:
+      CC: clang
+      CXX: clang++
+      CXXFLAGS: --std=c++23 -Wall -Wextra -Wpedantic
+      LDFLAGS: -static
+  hooks:
+    pre-build:
+      - catalyst: fmt   # run the formatter before every build
+
+ccache:
+  manifest:
+    tooling:
+      CC_LAUNCHER: ccache
+      CXX_LAUNCHER: ccache
+      LDFLAGS: -fuse-ld=mold
+
+debug:
+  manifest:
+    tooling:
+      CXXFLAGS: -g --std=c++23 -Wall -Wextra -Wpedantic
+
+release:
+  manifest:
+    tooling:
+      CXXFLAGS: -O3 -DNDEBUG --std=c++23 -Wall -Wextra -Wpedantic
+      LDFLAGS: -static -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections
+  hooks:
+    post-build:
+      - catalyst: pack -p common ccache release -a
+```
+
+A developer building an optimized binary with ccache acceleration would run:
+
+```bash
+catalyst build -p ccache release
+```

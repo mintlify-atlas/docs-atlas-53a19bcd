@@ -1,0 +1,60 @@
+---
+title: "Catalyst CLI reference — all subcommands overview"
+description: "Complete reference for every Catalyst subcommand, grouped by function, including global flags for version output, verbose logging, and help."
+keywords: ["catalyst", "cli", "command reference", "subcommands", "build system"]
+---
+
+The Catalyst CLI is the primary interface for managing C++ projects built with the Catalyst build system. Every workflow — from creating a new project to compiling, testing, and cleaning artifacts — is driven by a subcommand passed directly to the `catalyst` binary.
+
+## All commands
+
+| Command | Description |
+|---------|-------------|
+| [`add`](/cli/add) | Add a dependency to the project. |
+| [`bench`](/cli/bench) | Execute project benchmarks. |
+| [`build`](/cli/build) | Compile the project. |
+| [`clean`](/cli/clean) | Remove build artifacts. |
+| [`doc`](/cli/doc) | Build a package's documentation. |
+| [`download`](/cli/download) | Download, build, and install a project from git. |
+| [`fetch`](/cli/fetch) | Fetch remote dependencies. |
+| [`fmt`](/cli/fmt) | Format source code. |
+| [`generate`](/cli/generate) | Generate build scripts (Ninja, Make, etc.). |
+| [`ide-sync`](/cli/ide-sync) | Sync IDE configuration files for an existing project. |
+| [`init`](/cli/init) | Initialize a new project or profile. |
+| [`install`](/cli/install) | Install build artifacts. |
+| [`lock`](/cli/lock) | Pin dependency versions to a lockfile. |
+| [`pack`](/cli/pack) | Assemble the local package for distribution. |
+| [`profile-ls`](/cli/profile-ls) | List all available profiles in the current workspace. |
+| [`run`](/cli/run) | Run the built executable. |
+| [`test`](/cli/test) | Run project tests. |
+| [`tidy`](/cli/tidy) | Run static analysis. |
+
+## Global options
+
+These flags are accepted by every Catalyst command:
+
+| Flag | Description |
+|------|-------------|
+| `-v, --version` | Print version information and exit. |
+| `-V, --verbose` | Enable verbose logging (debug output). |
+| `-h, --help` | Print a help message for the command and exit. |
+
+## Project commands
+
+<CardGroup cols={2}>
+  <Card title="catalyst init" icon="folder-plus" href="/cli/init">
+    Scaffold a new project or profile, generating `catalyst.yaml`, source directories, and optional IDE configuration.
+  </Card>
+  <Card title="catalyst build" icon="hammer" href="/cli/build">
+    Compile the project with support for profile composition, feature flags, watch mode, and multiple build backends.
+  </Card>
+  <Card title="catalyst run" icon="play" href="/cli/run">
+    Execute the compiled binary for a given profile, optionally forwarding arguments to the process.
+  </Card>
+  <Card title="catalyst test" icon="flask-conical" href="/cli/test">
+    Build and run the test executable using the reserved `test` profile and `catalyst_test.yaml` configuration.
+  </Card>
+  <Card title="catalyst clean" icon="trash-2" href="/cli/clean">
+    Remove compiled artifacts for one or more profiles, invoking the underlying build backend's clean target.
+  </Card>
+</CardGroup>

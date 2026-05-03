@@ -1,0 +1,66 @@
+---
+title: "catalyst doc — generate API documentation"
+description: "Generate project API documentation using Doxygen or another configured engine from the manifest.tooling.doc section of your catalyst.yaml."
+keywords: ["catalyst", "doc", "doxygen", "documentation", "API docs", "C++"]
+---
+
+`catalyst doc` builds your project's API documentation by invoking the documentation engine specified in your `catalyst.yaml`. Doxygen is the supported engine. The command reads output directory and engine configuration from the `manifest.tooling.doc` section of your manifest.
+
+## Usage
+
+```bash
+catalyst doc [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-h, --help` | Print help and exit. |
+
+## Configuration
+
+Documentation settings live under `manifest.tooling.doc` in your `catalyst.yaml`:
+
+| Field | Description |
+|-------|-------------|
+| `engine` | Documentation engine to use. Currently supported: `doxygen`. |
+| `out_dir` | Directory where generated documentation is written. |
+
+Example `catalyst.yaml` excerpt:
+
+```yaml
+manifest:
+  name: my-project
+  version: 1.0.0
+  tooling:
+    doc:
+      engine: doxygen
+      out_dir: doxygen_docs
+```
+
+<Note>
+  A `Doxyfile` must be present in your project root when using the `doxygen` engine. Catalyst invokes `doxygen` directly and does not generate a `Doxyfile` for you.
+</Note>
+
+## Prerequisites
+
+Install Doxygen and make sure it is available on your `PATH`:
+
+```bash
+# macOS
+brew install doxygen
+
+# Debian / Ubuntu
+sudo apt install doxygen
+```
+
+## Examples
+
+Build documentation using the configured engine:
+
+```bash
+catalyst doc
+```
+
+The generated files are written to the directory specified by `manifest.tooling.doc.out_dir` (for example, `doxygen_docs/`).

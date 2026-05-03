@@ -1,0 +1,115 @@
+---
+title: "catalyst pack — package project for distribution"
+description: "Assemble a distributable archive or installer for your compiled project using CPack, driven by author, vendor, and license fields in catalyst.yaml."
+keywords: ["catalyst", "pack", "cpack", "package", "distribution", "TGZ", "DEB", "RPM", "installer"]
+---
+
+`catalyst pack` assembles your compiled project into a redistributable package using CPack. It stages your build artifacts via `catalyst install`, generates a `CPackConfig.cmake` from your manifest metadata, then runs `cpack` to produce archives or platform installers in the target directory.
+
+## Usage
+
+```bash
+catalyst pack [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-p, --profiles TEXT ...` | Profiles to compose for packing (default: `common`). |
+| `-s, --source TEXT` | Source directory of the project to pack (default: current directory). |
+| `-t, --target TEXT` | Output directory for generated package files (default: `build/pack`). |
+| `-G, --generators TEXT ...` | CPack generators to use (space-separated). See the table below. |
+| `-a, --all` | Run all available CPack generators. Failures for individual generators are logged as warnings rather than errors. |
+| `-h, --help` | Print help and exit. |
+
+## Supported generators
+
+| Value | Format |
+|-------|--------|
+| `TGZ` | Tar GZip archive |
+| `ZIP` | Zip archive |
+| `DEB` | Debian package |
+| `RPM` | Red Hat package |
+| `NSIS` | Windows installer (NSIS) |
+| `WIX` | Windows installer (WiX Toolset) |
+| `DMG` | macOS drag-and-drop disk image |
+| `STGZ` | Self-extracting Tar GZip archive |
+| `FREEBSD` | FreeBSD package |
+| `APK` | Alpine / Android package |
+| `7Z` | 7-Zip archive |
+| `TXZ` | XZ-compressed tarball |
+| `EXTERNAL` | CPack External generator |
+
+<Note>
+  The `DEB` and `RPM` generators require a valid `maintainer` or `author` field in your `catalyst.yaml`. Omitting contact information will cause CPack to fail.
+</Note>
+
+## Manifest fields used by pack
+
+`catalyst pack` reads the following fields from your `catalyst.yaml` to populate CPack metadata:
+
+| Field | CPack variable | Notes |
+|-------|---------------|-------|
+| `manifest.name` | `CPACK_PACKAGE_NAME` | Required. |
+| `manifest.version` | `CPACK_PACKAGE_VERSION` | Required. |
+| `manifest.description` | `CPACK_PACKAGE_DESCRIPTION_SUMMARY` | Optional. |
+| `manifest.author` | `CPACK_PACKAGE_CONTACT` | Used when `maintainer` is absent. |
+| `manifest.maintainer` | `CPACK_PACKAGE_CONTACT` | Takes precedence over `author`. Required for DEB/RPM. |
+| `manifest.vendor` | `CPACK_PACKAGE_VENDOR` | Optional; defaults to `"Catalyst"`. |
+| `manifest.license_file` | `CPACK_RESOURCE_FILE_LICENSE` | Path to license file included in the package. |
+| `manifest.readme_file` | `CPACK_RESOURCE_FILE_README` | Path to readme file included in the package. |
+
+Example `catalyst.yaml` with pack-relevant fields:
+
+```yaml
+manifest:
+  name: my-project
+  version: 1.2.0
+  description: "A high-performance C++ library."
+  author: "Jane Smith <jane@example.com>"
+  maintainer: "Jane Smith <jane@example.com>"
+  vendor: "Example Corp"
+  license_file: LICENSE
+  readme_file: README.md
+```
+
+## How pack works
+
+1. Verifies the source directory exists and composes the requested profiles.
+2. Checks that a `build/` directory is present — run `catalyst build` first if it is missing.
+3. Stages artifacts to a temporary `build/pack_stage/` directory using the same logic as `catalyst install`.
+4. Generates `build/CPackConfig.cmake` from manifest metadata.
+5. Invokes `cpack` once per generator (in parallel when multiple generators are specified).
+6. Writes the final package files to the target directory (`build/pack/` by default).
+7. Cleans up the staging directory and the generated `CPackConfig.cmake`.
+
+<Warning>
+  You must run `catalyst build` before `catalyst pack`. The pack command will fail with an error if the build directory does not exist.
+</Warning>
+
+## Examples
+
+Pack a release build into a TGZ archive:
+
+```bash
+catalyst pack --profiles release --generators TGZ
+```
+
+Pack into both a TGZ archive and a Debian package:
+
+```bash
+catalyst pack --profiles release --generators TGZ DEB
+```
+
+Pack to a custom output directory:
+
+```bash
+catalyst pack --profiles release --target ./dist/packages --generators ZIP
+```
+
+Try all available generators (failures are non-fatal):
+
+```bash
+catalyst pack --profiles release --all
+```

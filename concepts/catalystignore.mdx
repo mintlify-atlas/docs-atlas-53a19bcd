@@ -1,0 +1,74 @@
+---
+title: "Exclude source files with .catalystignore"
+description: "Use .catalystignore to exclude source files from the build based on active profiles. Patterns are YAML-defined regexes matched against filenames."
+---
+
+The `.catalystignore` file lets you exclude source files from the build based on which profiles are active. This is useful for keeping platform-specific files, debug utilities, or benchmark code out of builds where they don't belong — without duplicating your `catalyst.yaml` or reaching for manual file lists.
+
+## Location
+
+A `.catalystignore` file must be placed at the root of a directory listed in `manifest.dirs.source` in your `catalyst.yaml`. Catalyst looks for it there automatically when resolving source files.
+
+## Format
+
+The file uses YAML syntax. Each top-level key is a profile name, and its value is a list of regular expression patterns. Files whose names match any pattern for an active profile are excluded from the build.
+
+```yaml src/.catalystignore
+debug:
+  - "test_.*.cpp"
+  - ".*_benchmark.cpp"
+
+release:
+  - ".*_debug.cpp"
+
+linux:
+  - ".*_win32.cpp"
+```
+
+## How it works
+
+1. **Profile-based filtering.** Catalyst applies only the patterns whose top-level key matches a profile explicitly passed via `--profiles` (or `-p`). Patterns under `common` are applied only when `common` is explicitly included in `--profiles`.
+
+2. **Regex matching against the filename.** Patterns are matched against the filename alone, not the full path. The pattern `test_.*\.cpp` matches `src/test_main.cpp` but it will not match on directory names — for example, it won't exclude `src/tests/main.cpp` because the filename there is `main.cpp`.
+
+3. **Recursive scope.** `.catalystignore` at the root of a source directory applies to every file in that directory and all of its subdirectories.
+
+4. **Source extensions.** Catalyst only considers files with recognised source extensions. `.catalystignore` filters within that set. The recognised extensions are:
+   - `.cpp`, `.cxx`, `.cc`
+   - `.c`
+   - `.cu`, `.cupp` (CUDA)
+
+## Worked example
+
+Consider this project layout:
+
+```
+my-project/
+├── catalyst.yaml
+└── src/
+    ├── .catalystignore
+    ├── main.cpp
+    ├── util.cpp
+    ├── util_linux.cpp
+    └── util_win32.cpp
+```
+
+With `src/.catalystignore` containing:
+
+```yaml src/.catalystignore
+linux:
+  - ".*_win32\\.cpp"
+
+windows:
+  - ".*_linux\\.cpp"
+```
+
+Running `catalyst build --profiles linux` compiles `main.cpp`, `util.cpp`, and `util_linux.cpp`. The file `util_win32.cpp` is excluded because its name matches the `linux` profile pattern.
+
+Running `catalyst build --profiles windows` compiles `main.cpp`, `util.cpp`, and `util_win32.cpp`. The file `util_linux.cpp` is excluded because its name matches the `windows` profile pattern.
+
+Running `catalyst build` (no profiles) applies no exclusion patterns, so all four source files are compiled.
+
+<Note>
+  The pattern keys in `.catalystignore` must exactly match the profile names you pass to `--profiles`. Catalyst does not perform prefix matching or fuzzy lookup.
+</Note>

@@ -1,81 +1,124 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
-icon: 'rocket'
+title: "Quickstart: build your first C++ project with Catalyst"
+description: "Create, build, and run your first C++ project with Catalyst. This guide walks through init, configuration, building, running, and adding a dependency."
 ---
 
-## Get started in three steps
+This guide walks you through creating a new C++ project from scratch, configuring it with a `catalyst.yaml` file, building the binary, running it, and pulling in an external dependency.
 
-Get your documentation site running locally and make your first customization.
+## Create and run your first project
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Initialize the project">
+    Create a directory for your project and run `catalyst init` inside it:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash
+    mkdir my-app
+    cd my-app
+    catalyst init
+    ```
 
-### Step 2: Deploy your changes
+    Catalyst generates the following project structure:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```
+    my-app/
+    ├── catalyst.yaml
+    ├── src/
+    │   └── my-app.cpp
+    └── include/
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    - `catalyst.yaml` — the project configuration file
+    - `src/my-app.cpp` — a default entry point with a Hello World program
+    - `include/` — directory for header files
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Review the configuration">
+    Open `catalyst.yaml`. A typical starting configuration looks like this:
 
-### Step 3: Go live
+    ```yaml catalyst.yaml
+    manifest:
+      name: my-app
+      type: BINARY
+      version: 0.1.0
+      tooling:
+        CXX: clang++
+        CXXFLAGS: -std=c++20 -Wall -Wextra
+      dirs:
+        include: [include]
+        source: [src]
+        build: build
+    ```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    `type: BINARY` tells Catalyst to produce an executable. Change this to `STATICLIB` or `SHAREDLIB` to build a library instead. The `tooling` block sets the compiler and flags — swap `clang++` for `g++` if you are using GCC.
+  </Step>
+
+  <Step title="Build the project">
+    Run the build command from your project root:
+
+    ```bash
+    catalyst build
+    ```
+
+    Catalyst performs three steps:
+
+    1. **Generate** — produces build files using CBE by default (or Ninja / GNU Make if configured)
+    2. **Compile** — compiles all source files under `src/`
+    3. **Link** — links the compiled objects into the output binary
+
+    The final binary is written to `build/my-app`.
+  </Step>
+
+  <Step title="Run the application">
+    Execute the binary with:
+
+    ```bash
+    catalyst run
+    ```
+
+    You should see:
+
+    ```
+    Hello, Catalyst!
+    ```
+  </Step>
+</Steps>
+
+## Adding a dependency
+
+Use `catalyst add` to pull in an external library. The command accepts a source type (`git`, `vcpkg`, or `system`) and optional flags for version pinning.
+
+To add `fmt` from GitHub at version 10.0.0:
+
+```bash
+catalyst add git https://github.com/fmtlib/fmt.git -v 10.0.0
+```
+
+Catalyst appends the dependency to your `catalyst.yaml` automatically:
+
+```yaml catalyst.yaml
+dependencies:
+  - name: fmt
+    source: git
+    url: https://github.com/fmtlib/fmt.git
+    version: 10.0.0
+```
+
+Run `catalyst build` again to fetch and link the library.
+
+<Tip>
+  Pin your dependencies to a specific version and commit the resulting lock file to ensure reproducible builds across machines.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+<CardGroup cols={3}>
+  <Card title="Configuration reference" icon="file-code" href="/concepts/configuration">
+    Explore the full `catalyst.yaml` schema — manifest fields, tooling, directories, and more.
+  </Card>
+  <Card title="Profiles" icon="layer-group" href="/concepts/profiles">
+    Compose build configurations like `debug + asan` or `release + lto` on the command line.
+  </Card>
+  <Card title="Dependencies" icon="box" href="/concepts/dependencies">
+    Manage Git, vcpkg, local, and system libraries in depth.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

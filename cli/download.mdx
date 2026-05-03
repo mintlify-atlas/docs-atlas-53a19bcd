@@ -1,0 +1,74 @@
+---
+title: "catalyst download — build and install from a git repo"
+description: "Clone, build, and install a Catalyst project directly from a git repository URL in one command, with support for branches, profiles, and features."
+keywords: ["catalyst download", "install", "git", "clone", "build", "remote package"]
+---
+
+`catalyst download` automates the full lifecycle of installing a Catalyst-based project from a remote Git repository: it clones the repository to a temporary directory, runs `catalyst build` with your chosen profiles and features, installs the artifacts to the target path, and then cleans up the temporary directory.
+
+## Synopsis
+
+```bash
+catalyst download [OPTIONS] <remote> [<branch>]
+```
+
+## Options
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `remote` | — | required | Git repository URL to clone |
+| `branch` | — | — | Branch to clone (default branch if omitted) |
+| `--target` | `-t` | required | Installation destination path |
+| `--profiles` | `-p` | `common` | Profile composition for the build (repeatable) |
+| `--features` | `-f` | — | Features to enable during the build (repeatable) |
+
+## How it works
+
+<Steps>
+  <Step title="Clone">
+    Catalyst clones the repository into a randomly named temporary directory under the system temp path. If `branch` is provided, `--branch <branch>` is passed to `git clone`.
+  </Step>
+  <Step title="Build">
+    Catalyst runs the equivalent of `catalyst build --profiles <profiles> --features <features>` inside the cloned directory with the profiles and features you specified.
+  </Step>
+  <Step title="Install">
+    The build artifacts are installed to the absolute path derived from your `--target` argument.
+  </Step>
+  <Step title="Clean up">
+    The temporary clone directory is removed automatically after installation completes.
+  </Step>
+</Steps>
+
+<Note>
+  The target path is resolved to an absolute path before cloning begins, so a relative `--target ./bin` works correctly regardless of where the temporary directory is created.
+</Note>
+
+## Examples
+
+<CodeGroup>
+
+```bash Install to a local bin directory
+catalyst download https://github.com/user/repo.git --target ./bin
+```
+
+```bash Install a specific branch
+catalyst download https://github.com/user/repo.git develop --target /usr/local
+```
+
+```bash Build with custom profiles
+catalyst download https://github.com/user/repo.git --target ./dist --profiles release optimization
+```
+
+```bash Enable optional features
+catalyst download https://github.com/user/repo.git develop --target /usr/local --features extra_feature
+```
+
+</CodeGroup>
+
+<Tip>
+  Use `--profiles release` to install an optimised build instead of the default `common` profile.
+</Tip>
+
+<Warning>
+  The remote project must be a valid Catalyst project (it must contain a `catalyst.yaml`). Passing a URL to a non-Catalyst repository will cause the build step to fail.
+</Warning>

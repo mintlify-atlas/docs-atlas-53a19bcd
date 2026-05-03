@@ -1,0 +1,56 @@
+---
+title: "catalyst profile-ls — list build profiles"
+description: "List all available build profiles in the current workspace, including profiles from CATALYST.yaml, individual catalyst_*.yaml files, and the common profile."
+keywords: ["catalyst", "profile-ls", "profiles", "build profiles", "configuration", "catalyst.yaml"]
+---
+
+`catalyst profile-ls` scans the current workspace and prints the names of all available build profiles. Use it to confirm which profiles are defined before passing them to commands that accept `--profiles`.
+
+## Usage
+
+```bash
+catalyst profile-ls [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-h, --help` | Print help and exit. |
+
+## Profile discovery
+
+`catalyst profile-ls` searches for profiles in three places:
+
+1. **Top-level `CATALYST.yaml`** — profiles defined directly in this file are each listed by name.
+2. **Individual profile files** — any file matching the pattern `catalyst_*.yaml` in the project root is treated as a named profile. For example, `catalyst_release.yaml` registers the profile `release`.
+3. **`catalyst.yaml`** — if this file exists, the `common` profile is included.
+
+<Note>
+  The `bench` and `test` profiles are reserved. They are loaded automatically by `catalyst bench` and `catalyst test` from `catalyst_bench.yaml` and `catalyst_test.yaml` respectively.
+</Note>
+
+## Example output
+
+Running `catalyst profile-ls` in a project that has `catalyst.yaml`, `catalyst_debug.yaml`, and `catalyst_release.yaml` produces output similar to:
+
+```text
+common
+debug
+release
+```
+
+## Examples
+
+List all available profiles:
+
+```bash
+catalyst profile-ls
+```
+
+Use the output to verify a profile exists before building:
+
+```bash
+catalyst profile-ls
+catalyst build --profiles release
+```

@@ -1,0 +1,182 @@
+---
+title: "catalyst add — add a dependency to your Catalyst project"
+description: "Add git, vcpkg, local, and system dependencies to catalyst.yaml directly from the command line without editing the manifest file by hand."
+keywords: ["catalyst add", "dependency", "git", "vcpkg", "local", "system"]
+---
+
+`catalyst add` appends a new dependency entry to your `catalyst.yaml` without requiring you to edit the file by hand. Each source type has its own subcommand with flags that map directly to the YAML fields Catalyst writes.
+
+## Synopsis
+
+```bash
+catalyst add <subcommand> [OPTIONS]
+```
+
+Subcommands: `git`, `vcpkg`, `local`, `system`
+
+---
+
+## git
+
+Add a remote Git repository as a dependency. Catalyst derives the dependency name from the final path segment of the URL (stripping `.git`) unless you provide `--name`.
+
+```bash
+catalyst add git [OPTIONS] <remote>
+```
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--name` | `-n` | derived from URL | Override the dependency name |
+| `--version` | `-v` | `latest` | Branch, tag, or `latest` |
+| `--features` | `-f` | — | Features to enable (repeatable) |
+| `--profiles` | `-p` | — | Profiles to add the dependency to (repeatable) |
+
+<Tip>
+  Run `catalyst lock` after adding a git dependency to pin it to a specific commit hash.
+</Tip>
+
+**YAML written**
+
+```yaml
+- name: fmt
+  source: git
+  url: https://github.com/fmtlib/fmt.git
+  version: 10.1.0
+```
+
+**Examples**
+
+```bash
+# Add fmt at a specific tag
+catalyst add git https://github.com/fmtlib/fmt.git -v 10.1.0
+
+# Add and override the name
+catalyst add git https://github.com/fmtlib/fmt.git -v 10.1.0 --name fmt
+
+# Track the latest commit on the default branch
+catalyst add git https://github.com/fmtlib/fmt.git
+
+# Add to a specific profile
+catalyst add git https://github.com/fmtlib/fmt.git -v 10.1.0 -p debug
+```
+
+---
+
+## vcpkg
+
+Add a vcpkg package as a dependency. The `--triplet` flag is required and specifies the target architecture and linkage (for example, `x64-linux` or `x64-windows-static`).
+
+```bash
+catalyst add vcpkg [OPTIONS] <name>
+```
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--triplet` | `-t` | — | vcpkg triplet (required) |
+| `--version` | `-v` | `latest` | vcpkg port version |
+| `--features` | `-f` | — | vcpkg features to enable (repeatable) |
+| `--profiles` | `-p` | `common` | Profiles to add the dependency to (repeatable) |
+
+**YAML written**
+
+```yaml
+- name: fmt
+  source: vcpkg
+  triplet: x64-linux
+  version: latest
+```
+
+**Examples**
+
+```bash
+# Add fmt for 64-bit Linux
+catalyst add vcpkg fmt -t x64-linux
+
+# Pin to a specific version
+catalyst add vcpkg fmt -t x64-linux -v 10.1.1
+
+# Add to the release profile with extra features
+catalyst add vcpkg boost -t x64-linux -p release -f filesystem
+```
+
+<Note>
+  `VCPKG_ROOT` must be set in your environment before running `catalyst fetch` or `catalyst build` with vcpkg dependencies.
+</Note>
+
+---
+
+## local
+
+Add a local on-disk package as a dependency. Both `name` and `path` are required positional arguments. `catalyst fetch` will recursively run `catalyst build` in the referenced directory.
+
+```bash
+catalyst add local [OPTIONS] <name> <path>
+```
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--profiles` | `-p` | — | Profiles to add the dependency to (repeatable) |
+| `--features` | `-f` | — | Features to enable (repeatable) |
+
+**YAML written**
+
+```yaml
+- name: my-lib
+  source: local
+  path: ../libs/my-lib
+```
+
+**Examples**
+
+```bash
+# Add a sibling library
+catalyst add local my-lib ../libs/my-lib
+
+# Add only for the debug profile
+catalyst add local my-lib ../libs/my-lib -p debug
+```
+
+<Warning>
+  Catalyst detects dependency cycles for local packages. A cycle causes `catalyst fetch` to fail with an error naming the offending path.
+</Warning>
+
+---
+
+## system
+
+Add a system-installed library as a dependency. Catalyst records the name and optional override paths; `catalyst fetch` verifies presence via `pkg-config` at build time.
+
+```bash
+catalyst add system [OPTIONS] <name>
+```
+
+| Option | Short | Default | Description |
+|---|---|---|---|
+| `--lib` | `-l` | — | Override library path |
+| `--inc` | `-i` | — | Override include path |
+| `--profiles` | `-p` | — | Profiles to add the dependency to (repeatable) |
+
+**YAML written**
+
+```yaml
+- name: openssl
+  source: system
+```
+
+**Examples**
+
+```bash
+# Add OpenSSL from the system
+catalyst add system openssl
+
+# Add with explicit paths (useful in sysroot builds)
+catalyst add system openssl -l /usr/lib/x86_64-linux-gnu -i /usr/include/openssl
+```
+
+---
+
+## Notes
+
+- `catalyst add` will refuse to add a dependency whose name already exists in the target profile and will exit with an error instead.
+- All subcommands write directly to `catalyst.yaml` (or the profile YAML file for the specified profiles). No build is triggered.
+- To remove a dependency, edit `catalyst.yaml` directly.

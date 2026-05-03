@@ -1,0 +1,63 @@
+---
+title: "catalyst run — execute your Catalyst-built binary"
+description: "Run the Catalyst-built executable for a given profile, with support for forwarding arguments and automatic shared-library path configuration."
+keywords: ["catalyst run", "execute", "binary", "profile", "arguments", "LD_LIBRARY_PATH"]
+---
+
+`catalyst run` locates the compiled binary for the specified profile and executes it directly. It automatically configures the dynamic-library search path (`LD_LIBRARY_PATH` on Linux, `DYLD_LIBRARY_PATH` on macOS, `PATH` on Windows) so that shared libraries built alongside the binary are found at runtime. Pre- and post-run hooks defined in the project configuration are invoked around the execution.
+
+## Usage
+
+```text
+catalyst run [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  -p,--profile TEXT           Profile whose binary to run (default: common)
+  -P,--params TEXT ...        Arguments to pass to the executable
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-p, --profile` | string | `common` | Name of the profile whose compiled binary should be executed. |
+| `-P, --params` | string list | _(empty)_ | Arguments forwarded verbatim to the executable. Each value is treated as a separate argument. |
+
+<Note>
+`catalyst run` only works with projects whose `manifest.type` is `BINARY`. Running it against a library target (staticlib, sharedlib, or interface) will return an error.
+</Note>
+
+## How the executable is located
+
+Catalyst determines the binary path by reading the composed profile:
+
+1. If `manifest.provides` is set and non-empty, that value is used as the executable name.
+2. Otherwise `manifest.name` is used.
+3. The binary is expected at `<build-dir>/<executable-name>` inside the profile's build directory.
+
+## Examples
+
+**Run the default (common) build:**
+
+```bash
+catalyst run
+```
+
+**Run the debug build:**
+
+```bash
+catalyst run --profile debug
+```
+
+**Run with arguments forwarded to the executable:**
+
+```bash
+catalyst run --params "--verbose" "--input" "data.txt"
+```
+
+**Run the debug build with arguments:**
+
+```bash
+catalyst run --profile debug --params "--verbose" "--input" "data.txt"
+```

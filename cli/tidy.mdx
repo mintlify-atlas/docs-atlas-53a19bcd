@@ -1,0 +1,68 @@
+---
+title: "catalyst tidy — run static analysis"
+description: "Run clang-tidy static analysis across your project source files to catch bugs, style issues, and performance problems using your .clang-tidy config."
+keywords: ["catalyst", "tidy", "clang-tidy", "static analysis", "linting", "C++"]
+---
+
+`catalyst tidy` runs `clang-tidy` on your project's source files to identify potential bugs, stylistic issues, and performance improvements. It respects the `.clang-tidy` configuration file in your project root, giving you full control over which checks are enabled.
+
+## Usage
+
+```bash
+catalyst tidy [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-p, --profiles TEXT ...` | Profiles to compose when resolving source files. |
+| `--fix` | Automatically apply fixes for lint warnings where possible. |
+| `-h, --help` | Print help and exit. |
+
+## Prerequisites
+
+`clang-tidy` must be installed and available on your `PATH`. You also need a `compile_commands.json` in your build directory so that `clang-tidy` knows the exact compile flags for each file. Run `catalyst ide-sync` to generate one.
+
+```bash
+catalyst ide-sync
+catalyst tidy
+```
+
+<Note>
+  A `.clang-tidy` file in the project root controls which checks are active. Without one, `clang-tidy` applies its default set of checks.
+</Note>
+
+## Using --fix
+
+Passing `--fix` instructs `clang-tidy` to automatically rewrite source files where a safe fix is available. Review the changes in your version control diff before committing.
+
+<Warning>
+  Automatic fixes can change program behavior in rare cases. Always review the diff produced by `--fix` before committing.
+</Warning>
+
+## Examples
+
+Run static analysis using the default profile:
+
+```bash
+catalyst tidy
+```
+
+Run analysis against the `release` profile:
+
+```bash
+catalyst tidy --profiles release
+```
+
+Run analysis and automatically apply fixes:
+
+```bash
+catalyst tidy --fix
+```
+
+Run analysis with multiple profiles:
+
+```bash
+catalyst tidy --profiles common debug
+```

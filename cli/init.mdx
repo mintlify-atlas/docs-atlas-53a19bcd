@@ -1,0 +1,138 @@
+---
+title: "catalyst init — scaffold a new C++ Catalyst project"
+description: "Scaffold a Catalyst project: generates catalyst.yaml, src/ and include/ directories, an entry-point file, and optional IDE configuration."
+keywords: ["catalyst init", "new project", "scaffold", "catalyst.yaml", "project structure"]
+---
+
+`catalyst init` creates everything needed to start a new Catalyst project in the current directory. It writes a `catalyst.yaml` profile, creates the configured source and include directories, and — for binary projects — generates a starter `main` file. You can also use `init` to add a new named profile (for example, `debug`) to an existing project without overwriting the common profile.
+
+## Usage
+
+```text
+catalyst init [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+  -n,--name TEXT              Name of the project (default: current directory name)
+  --path TEXT                 Root path for the project (default: current directory)
+  -t,--type TEXT              Project type: binary, staticlib, sharedlib, interface (default: binary)
+  -v,--version TEXT           Project version (default: 0.0.1)
+  -d,--description TEXT       Short description of the project
+  --provides TEXT             Artifact name provided by this project
+  --cc TEXT                   C compiler to use (default: cc / msvc on Windows)
+  --cxx TEXT                  C++ compiler to use (default: c++ / msvc on Windows)
+  --ccflags TEXT              Additional C compiler flags
+  --cxxflags TEXT             Additional C++ compiler flags
+  --ldflags TEXT              Additional linker flags
+  --include-dirs TEXT ...     Include directories (default: include)
+  --source-dirs TEXT ...      Source directories (default: src)
+  --build-dir TEXT            Build output directory (default: build)
+  --ides TEXT ...             IDE project files to generate: vscode, clion
+  -p,--profile TEXT           Profile name to initialize (default: common)
+  -f,--force-ide              Overwrite IDE config even if it already exists
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-n, --name` | string | current directory name | Name of the project, used as the executable name for binary targets. |
+| `--path` | string | current directory | Root directory in which to create the project structure. |
+| `-t, --type` | string | `binary` | Target type: `binary`, `staticlib`, `sharedlib`, or `interface`. |
+| `-v, --version` | string | `0.0.1` | Semantic version recorded in `catalyst.yaml`. |
+| `-d, --description` | string | `Your Description Goes Here.` | Human-readable project description. |
+| `--provides` | string | _(empty)_ | Override the output artifact name. When empty, `--name` is used. |
+| `--cc` | string | `cc` / `msvc` | C compiler command. |
+| `--cxx` | string | `c++` / `msvc` | C++ compiler command. |
+| `--ccflags` | string | _(empty)_ | Flags appended to every C compilation command. |
+| `--cxxflags` | string | _(empty)_ | Flags appended to every C++ compilation command. |
+| `--ldflags` | string | _(empty)_ | Flags appended to the link step. |
+| `--include-dirs` | string list | `include` | One or more directories to search for headers. |
+| `--source-dirs` | string list | `src` | One or more directories scanned for source files. |
+| `--build-dir` | string | `build` | Directory where compiled objects and the final artifact are written. |
+| `--ides` | string list | _(none)_ | IDE integrations to generate: `vscode`, `clion`. |
+| `-p, --profile` | string | `common` | Profile name. Use `common` for the main profile; any other value creates `catalyst_<name>.yaml`. |
+| `-f, --force-ide` | flag | `false` | Write IDE configuration files even if they already exist. |
+
+## What init generates
+
+Running `catalyst init --name my-tool` in an empty directory produces:
+
+```text
+my-tool/
+├── catalyst.yaml       # Common profile configuration
+├── build/              # Build output directory (created empty)
+├── include/            # Header files
+└── src/
+    ├── .catalystignore # File ignore list for the watcher
+    └── my-tool.cpp     # Starter main() for binary projects
+```
+
+For named profiles (e.g., `--profile debug`), only the profile file is written — no directories or source files are created.
+
+## Generated catalyst.yaml
+
+The following example shows the file produced by `catalyst init --name my-tool`:
+
+```yaml
+meta:
+  min_ver: "0.1.0"
+manifest:
+  name: my-tool
+  type: BINARY
+  version: 0.0.1
+  description: Your Description Goes Here.
+  provides: ""
+  tooling:
+    CC: cc
+    CXX: c++
+    CCFLAGS: ""
+    CXXFLAGS: ""
+    LDFLAGS: ""
+  dirs:
+    include:
+      - include
+    source:
+      - src
+    build: build
+```
+
+## Examples
+
+**Create a basic binary project:**
+
+```bash
+catalyst init --name my-tool
+```
+
+**Create a static library:**
+
+```bash
+catalyst init --name my-lib --type staticlib
+```
+
+**Create a library with an explicit compiler:**
+
+```bash
+catalyst init --name my-lib --type staticlib --cxx g++-13
+```
+
+**Add a debug profile to an existing project:**
+
+```bash
+catalyst init --profile debug --cxxflags "-g -O0"
+```
+
+This writes `catalyst_debug.yaml` alongside the existing `catalyst.yaml` without modifying it.
+
+**Generate IDE configuration files:**
+
+```bash
+catalyst init --name my-tool --ides vscode clion
+```
+
+**Override the default source and include directories:**
+
+```bash
+catalyst init --name my-tool --source-dirs source --include-dirs headers
+```

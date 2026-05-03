@@ -1,0 +1,91 @@
+---
+title: "Preprocessor macros and feature flags"
+description: "Catalyst automatically defines CATALYST_BUILD_SYS, CATALYST_PROJ_NAME, and CATALYST_PROJ_VER macros, and maps features to FF_ preprocessor flags."
+---
+
+Catalyst integrates directly with the C++ preprocessor so your source code can inspect build metadata and conditionally compile feature-gated code. Every compilation automatically receives a set of built-in macros, and each feature you declare in `catalyst.yaml` is exposed as a preprocessor flag.
+
+## Catalyst-defined macros
+
+The following macros are injected by Catalyst on every build. You do not need to configure anything to use them.
+
+| Macro | Source | Description |
+|---|---|---|
+| `CATALYST_BUILD_SYS` | Always set | Defined whenever your code is compiled by Catalyst. Use it to detect the build system at compile time. |
+| `CATALYST_PROJ_NAME` | `manifest.name` | The project name string as declared in your `catalyst.yaml`. |
+| `CATALYST_PROJ_VER` | `manifest.version` | The project version string as declared in your `catalyst.yaml`. |
+
+## Feature flags
+
+Features declared in `catalyst.yaml` map to preprocessor macros following the pattern `FF_<project>__<feature>`. The macro is defined as `1` when the feature is enabled and `0` when it is disabled.
+
+### Declaring features
+
+```yaml catalyst.yaml
+manifest:
+  name: my_app
+  version: 0.1.0
+
+features:
+  logging: true
+  gui: false
+  predictive_execution:
+    default: true
+    files: ["src/predictive_execution.cpp"]
+```
+
+The `files` list under a feature is optional. Source files listed there are only compiled when the feature is enabled — they are excluded from the build entirely when the feature is off.
+
+### Generated macros
+
+For the configuration above, Catalyst defines:
+
+- `FF_my_app__logging` — `1` (enabled by default)
+- `FF_my_app__gui` — `0` (disabled by default)
+- `FF_my_app__predictive_execution` — `1` (enabled; `src/predictive_execution.cpp` compiled)
+
+### Using feature flags in code
+
+```cpp
+#include <iostream>
+
+int main() {
+#if FF_my_app__logging
+    std::cout << "Logging is enabled.\n";
+#endif
+
+#if FF_my_app__gui
+    launch_gui();
+#endif
+
+    return 0;
+}
+```
+
+### Overriding features at build time
+
+You can override any feature's default state on the command line without editing `catalyst.yaml`:
+
+```bash
+# Enable the logging feature
+catalyst build --features logging
+
+# Disable the logging feature
+catalyst build --features no-logging
+
+# Combine multiple overrides
+catalyst build --features logging no-gui
+```
+
+## Custom flags
+
+You can pass arbitrary preprocessor definitions through the `tooling` section of your manifest. These are appended directly to the compiler invocation.
+
+```yaml catalyst.yaml
+manifest:
+  name: my_app
+  tooling:
+    CXXFLAGS: "-DENABLE_EXPERIMENTAL"
+```
+
+This is equivalent to passing `-DENABLE_EXPERIMENTAL` on every compiler call and works for any flag your compiler accepts.

@@ -1,0 +1,61 @@
+---
+title: "catalyst bench — run project benchmarks"
+description: "Build and execute all benchmarks for a local Catalyst package using the reserved bench profile, sourced from catalyst_bench.yaml in your project root."
+keywords: ["catalyst", "bench", "benchmarks", "performance", "profiling", "C++"]
+---
+
+`catalyst bench` compiles and runs your project's benchmark suite. It uses the reserved `bench` profile, which Catalyst resolves from a `catalyst_bench.yaml` file in your project root. This keeps benchmark-specific compiler flags, dependencies, and source directories separate from your main and test configurations.
+
+## Usage
+
+```bash
+catalyst bench [OPTIONS]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-P, --params TEXT ...` | Arguments to pass directly to the benchmark executable. |
+| `-h, --help` | Print help and exit. |
+
+## The bench profile
+
+Catalyst treats `bench` as a reserved profile name. When you run `catalyst bench`, it automatically looks for `catalyst_bench.yaml` in the project root and composes it with the `common` profile. You do not need to pass `--profiles bench` explicitly.
+
+A minimal `catalyst_bench.yaml` might look like:
+
+```yaml
+manifest:
+  dirs:
+    source:
+      - bench
+  tooling:
+    CXXFLAGS: "-O3 -DNDEBUG"
+```
+
+<Tip>
+  Popular C++ benchmarking libraries such as Google Benchmark integrate well with Catalyst. Add them as dependencies in `catalyst_bench.yaml` and list your benchmark source files under `manifest.dirs.source`.
+</Tip>
+
+## Passing parameters
+
+Use `--params` to forward arguments to the benchmark binary after it is built:
+
+```bash
+catalyst bench --params --benchmark_filter=MyBench --benchmark_repetitions=5
+```
+
+## Examples
+
+Build and run all benchmarks:
+
+```bash
+catalyst bench
+```
+
+Run benchmarks and pass filter arguments to the binary:
+
+```bash
+catalyst bench --params --benchmark_filter=SortBench
+```
